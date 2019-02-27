@@ -14,11 +14,11 @@ import android.widget.TextView;
 import java.io.File;
 import java.util.List;
 
-import cc.brainbook.study.mymultithreadhttpdownload.multithreadhttpdownload.DownloadTask;
-import cc.brainbook.study.mymultithreadhttpdownload.multithreadhttpdownload.bean.FileInfo;
-import cc.brainbook.study.mymultithreadhttpdownload.multithreadhttpdownload.bean.ThreadInfo;
-import cc.brainbook.study.mymultithreadhttpdownload.multithreadhttpdownload.interfaces.DownloadEvent;
-import cc.brainbook.study.mymultithreadhttpdownload.multithreadhttpdownload.interfaces.OnProgressListener;
+import cc.brainbook.android.multithreadhttpdownload.DownloadTask;
+import cc.brainbook.android.multithreadhttpdownload.bean.FileInfo;
+import cc.brainbook.android.multithreadhttpdownload.bean.ThreadInfo;
+import cc.brainbook.android.multithreadhttpdownload.interfaces.DownloadEvent;
+import cc.brainbook.android.multithreadhttpdownload.interfaces.OnProgressListener;
 
 public class MainActivity extends AppCompatActivity implements DownloadEvent {
     private static final String TAG = "TAG";
