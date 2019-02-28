@@ -11,8 +11,9 @@ public class FileInfo {
     /**
      * 状态标志
      *
-     * 注意：考虑到多线程访问，必须声明为volatile！
+     * 注意：考虑到多线程访问，必须声明为volatile（是一种轻量级的synchronized）
      *
+     * https://www.jianshu.com/p/31e5ab16935f
      * https://blog.csdn.net/changlei_shennan/article/details/44039905
      */
     private volatile int status;
@@ -27,7 +28,10 @@ public class FileInfo {
     /**
      * 已经下载完的总字节数
      *
-     * 注意：考虑到多线程，是该下载文件各个线程下载的字节数的总和
+     * 注意：考虑到多线程访问，必须声明为volatile（是一种轻量级的synchronized）
+     *
+     * https://www.jianshu.com/p/31e5ab16935f
+     * https://blog.csdn.net/changlei_shennan/article/details/44039905
      */
     private volatile long finishedBytes;
 
