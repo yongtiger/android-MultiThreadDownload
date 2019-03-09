@@ -1,5 +1,9 @@
 apply plugin: 'com.android.library'
 
+///[jitpack#publish]https://jitpack.io/docs/ANDROID/
+apply plugin: 'com.github.dcendents.android-maven'
+group='com.github.yongtiger'
+
 android {
     compileSdkVersion 28
 
