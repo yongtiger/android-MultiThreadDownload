@@ -4,6 +4,7 @@ import java.util.List;
 
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
+import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 
 /**
  * 下载事件接口
@@ -47,5 +48,12 @@ public interface DownloadEvent {
      * @param threadInfos
      */
     void onComplete(FileInfo fileInfo, List<ThreadInfo> threadInfos);
+
+    /**
+     * 下载错误的事件
+     *
+     * @param fileInfo
+     */
+    void onError(FileInfo fileInfo, List<ThreadInfo> threadInfos, DownloadException downloadException);
 
 }

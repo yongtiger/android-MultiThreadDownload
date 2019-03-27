@@ -10,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.List;
 import cc.brainbook.android.multithreaddownload.DownloadTask;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
+import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 import cc.brainbook.android.multithreaddownload.interfaces.DownloadEvent;
 import cc.brainbook.android.multithreaddownload.interfaces.OnProgressListener;
 
@@ -37,7 +39,7 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "============== MainActivity# onCreate(): ==============");
+        Log.d(TAG, "============== MainActivity# onCreate()# ==============");
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -86,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
 
     @Override
     protected void onDestroy() {
-        Log.d(TAG, "============== MainActivity# onDestroy(): ==============");
+        Log.d(TAG, "============== MainActivity# onDestroy()# ==============");
 
         ///Activity退出后应调用下载暂停来保存下载文件信息（即断点）到数据库
         pauseDownload(mDownloadTask);
@@ -101,57 +103,9 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
     public void init() {
         ///创建下载任务类DownloadTask实例，并链式配置参数
         ///实例化DownloadTask时传入Context引用，方便操作（但要留意引起内存泄漏！）
-//        mDownloadTask = new DownloadTask(getApplicationContext())
-//                .setFileUrl("http://23.237.10.182/ljdy_v1.0.1.apk")
-//                .setFileName("ljdy_v1.0.1.apk")
-//                .setSavePath(DOWNLOAD_PATH)
-//                .setThreadCount(1)
-//                .setOnProgressListener(new OnProgressListener() {   ///设置进度监听（可选）
-//                    @Override
-//                    public void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes) {
-//                        Log.d(TAG, "MainActivity# onProgress()# fileInfo: " + fileInfo);
-//                        for (ThreadInfo threadInfo : threadInfos) {
-//                            Log.d(TAG, "MainActivity# onProgress()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-//                            Log.d(TAG, "MainActivity# onProgress()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
-//                        }
-//                        Log.d(TAG, "MainActivity# onProgress()# diffTimeMillis: " + diffTimeMillis);
-//                        Log.d(TAG, "MainActivity# onProgress()# diffFinishedBytes: " + diffFinishedBytes);
-//                        ///避免除0异常
-//                        int progress = fileInfo.getFinishedBytes() == 0 ? 0 : (int) (fileInfo.getFinishedBytes() * 100 / fileInfo.getFileSize());
-//                        long speed = diffFinishedBytes == 0 ? 0 : diffFinishedBytes / diffTimeMillis;
-//                        Log.d(TAG, "MainActivity# onProgress()# progress, speed: " + progress + ", " + speed);
-//
-//                        mTextView.setText(progress + ", " + speed);
-//                    }
-//                })
-//                .setDownloadEvent(this);
-//        mDownloadTask = new DownloadTask(getApplicationContext())
-//                .setFileUrl("http://23.237.10.182/smqq.info.rar")
-//                .setFileName("smqq.info.rar")
-//                .setSavePath(DOWNLOAD_PATH)
-//                .setThreadCount(5)
-//                .setOnProgressListener(new OnProgressListener() {   ///设置进度监听（可选）
-//                    @Override
-//                    public void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes) {
-//                        Log.d(TAG, "MainActivity# onProgress()# fileInfo: " + fileInfo);
-//                        for (ThreadInfo threadInfo : threadInfos) {
-//                            Log.d(TAG, "MainActivity# onProgress()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-//                            Log.d(TAG, "MainActivity# onProgress()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
-//                        }
-//                        Log.d(TAG, "MainActivity# onProgress()# diffTimeMillis: " + diffTimeMillis);
-//                        Log.d(TAG, "MainActivity# onProgress()# diffFinishedBytes: " + diffFinishedBytes);
-//                        ///避免除0异常
-//                        int progress = fileInfo.getFinishedBytes() == 0 ? 0 : (int) (fileInfo.getFinishedBytes() * 100 / fileInfo.getFileSize());
-//                        long speed = diffFinishedBytes == 0 ? 0 : diffFinishedBytes / diffTimeMillis;
-//                        Log.d(TAG, "MainActivity# onProgress()# progress, speed: " + progress + ", " + speed);
-//
-//                        mTextView.setText(progress + ", " + speed);
-//                    }
-//                })
-//                .setDownloadEvent(this);
         mDownloadTask = new DownloadTask(getApplicationContext())
-                .setFileUrl("http://23.237.10.182/bbs.rar")
-                .setFileName("bbs.rar")
+                .setFileUrl("http://ljdy.tv/app/ljdy.apk")
+                .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
                 .setThreadCount(10)
                 .setOnProgressListener(new OnProgressListener() {   ///设置进度监听（可选）
@@ -281,6 +235,42 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
         long finishedTimeMillis = fileInfo.getFinishedTimeMillis();
         ///已经下载完的总字节数
         long finishedBytes = fileInfo.getFinishedBytes();
+    }
+
+    @Override
+    public void onError(FileInfo fileInfo, List<ThreadInfo> threadInfos, DownloadException downloadException) {
+        if (downloadException.getCause() == null) {
+            Log.d(TAG, "MainActivity# onError()# downloadException.getCode(): " + downloadException.getCode() + ", " + downloadException.getMessage());
+        } else {
+            Log.d(TAG, "MainActivity# onError()# downloadException.getCode(): " + downloadException.getCode() + ", " + downloadException.getMessage() + "\n" + downloadException.getCause().getMessage());
+
+        }
+
+        if (DownloadException.EXCEPTION_FILE_URL_NULL == downloadException.getCode()) {
+            Toast.makeText(this, downloadException.getMessage(), Toast.LENGTH_LONG).show();
+        } else
+        if (DownloadException.EXCEPTION_SAVE_PATH_MKDIR == downloadException.getCode()) {
+            Toast.makeText(this, downloadException.getMessage(), Toast.LENGTH_LONG).show();
+        }
+        ///当URL为null或无效网络连接协议时：java.net.MalformedURLException: Protocol not found
+        if (DownloadException.EXCEPTION_NETWORK_MALFORMED_URL == downloadException.getCode()) {
+            Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
+        } else
+            ///URL虽然以http://或https://开头、但host为空或无效host
+            ///     java.net.UnknownHostException: http://
+            ///     java.net.UnknownHostException: Unable to resolve host "aaa": No address associated with hostname
+            if (DownloadException.EXCEPTION_NETWORK_UNKNOWN_HOST == downloadException.getCode()) {
+                Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
+            } else
+                ///如果没有网络连接
+                if (DownloadException.EXCEPTION_NETWORK_IO_EXCEPTION == downloadException.getCode()) {
+                    Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
+
+                    ///开启Wifi网络设置页面
+//                    startWifiSettingsActivity();
+                } else {
+                    Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
+                }
     }
 
 }

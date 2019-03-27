@@ -18,6 +18,8 @@ import cc.brainbook.android.multithreaddownload.db.ThreadDAO;
 import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
 import cc.brainbook.android.multithreaddownload.util.Util;
 
+import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
+
 public class DownloadThread extends Thread {
     private static final String TAG = "TAG";
 
@@ -75,7 +77,7 @@ public class DownloadThread extends Thread {
 
             ///获得保存文件对象
             File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
-            ///
+            ///获得保存文件的随机访问文件对象RandomAccessFile，并定位
             randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile);
             HttpDownloadUtil.randomAccessFileSeek(randomAccessFile, start);
             ///由文件的输出流对象获得FileChannel对象
@@ -107,14 +109,14 @@ public class DownloadThread extends Thread {
                 ///累计每个线程的下载进度
                 mThreadInfo.setFinishedBytes(mThreadInfo.getFinishedBytes() + readLength);
 
-                Log.d(TAG, "DownloadThread# run(): Thread name(" + Thread.currentThread().getName() + "), " + mThreadInfo.getStart() + " - " + mThreadInfo.getEnd() + ", Finished: " +mThreadInfo.getFinishedBytes());
+                if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), " + mThreadInfo.getStart() + " - " + mThreadInfo.getEnd() + ", Finished: " +mThreadInfo.getFinishedBytes());
 
                 if (mFileInfo.getStatus() == FileInfo.FILE_STATUS_PAUSE) {  ///暂停下载线程
-                    Log.d(TAG, "DownloadThread# run(): Thread name(" + Thread.currentThread().getName() + "), Status: THREAD_STATUS_PAUSE");
+                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: THREAD_STATUS_PAUSE");
                     mThreadInfo.setStatus(ThreadInfo.THREAD_STATUS_PAUSE);
 
                     ///下载线程信息保存到数据库
-                    Log.d(TAG, "DownloadThread# run(): Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
+                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
                     mThreadDAO.updateThread(mThreadInfo.getId(), mThreadInfo.getFinishedBytes());
 
                     ///判断所有下载线程是否暂停，并做相应处理
@@ -124,7 +126,7 @@ public class DownloadThread extends Thread {
 
                     return;
                 } else if (mFileInfo.getStatus() == FileInfo.FILE_STATUS_STOP) {   ///停止下载线程
-                    Log.d(TAG, "DownloadThread# run(): Thread name(" + Thread.currentThread().getName() + "), Status: FILE_STATUS_STOP");
+                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: FILE_STATUS_STOP");
                     mThreadInfo.setStatus(ThreadInfo.THREAD_STATUS_STOP);
 
                     return;
@@ -135,7 +137,7 @@ public class DownloadThread extends Thread {
             mThreadInfo.setStatus(ThreadInfo.THREAD_STATUS_COMPLETE);
 
             ///下载线程信息保存到数据库
-            Log.d(TAG, "DownloadThread# run(): Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
+            if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
             mThreadDAO.updateThread(mThreadInfo.getId(), mThreadInfo.getFinishedBytes());
 
             ///判断所有下载线程是否完成，并做相应处理

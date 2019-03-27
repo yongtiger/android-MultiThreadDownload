@@ -4,9 +4,12 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
+import java.nio.channels.FileChannel;
 
 import cc.brainbook.android.multithreaddownload.DownloadTask;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
@@ -17,6 +20,8 @@ import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 import cc.brainbook.android.multithreaddownload.handler.DownloadHandler;
 import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
 import cc.brainbook.android.multithreaddownload.util.Util;
+
+import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
 
 public class InitThread extends Thread {
     private static final String TAG = "TAG";
@@ -45,54 +50,83 @@ public class InitThread extends Thread {
 
     @Override
     public void run() {
-        Log.d(TAG, "InitThread# run(): ");
+        if (DEBUG) Log.d(TAG, "InitThread# run()# ");
         super.run();
 
 
         /* ----------- 重置mFileInfo的已经下载完的总耗时（毫秒） ----------- */
         ///注意：只计算本次下载初始化之后的总耗时，如果数据库已存线程信息，也重新计算，不累计（[//////??????以后改进]）
-        Log.d(TAG, "InitThread# run(): 重置mFileInfo的FinishedTimeMillis为0");
+        if (DEBUG) Log.d(TAG, "InitThread# run()# 重置mFileInfo的FinishedTimeMillis为0");
         mFileInfo.setFinishedTimeMillis(0);
 
 
         /* ----------- 检验文件网址URL、保存目录 ----------- */
         if (TextUtils.isEmpty(mFileInfo.getFileUrl())) {
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, "The file url cannot be null.");
+            ///更新下载文件状态：下载错误
+            mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+            mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
+                    new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, "The file url cannot be null."))
+                    .sendToTarget();
+            return;
         }
         if (TextUtils.isEmpty(mFileInfo.getSavePath())) {
             mFileInfo.setSavePath(Util.getDefaultFilesDirPath(mContext));
         } else {
             if (!Util.mkdirs(mFileInfo.getSavePath())) {
-                throw new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The save path cannot be made: " + mFileInfo.getSavePath());
+                ///更新下载文件状态：下载错误
+                mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+                mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
+                        new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The file save path cannot be made: " + mFileInfo.getSavePath()))
+                        .sendToTarget();
+                return;
             }
         }
 
+        HttpURLConnection connection = null;
+        RandomAccessFile randomAccessFile = null;
+        try {
+            /* ----------- 由网络连接获得文件名、文件长度 ----------- */
+            ///由下载文件的URL网址建立网络连接
+            connection = HttpDownloadUtil.openConnection(mFileInfo.getFileUrl(), mConfig.connectTimeout);
 
-        /* ----------- 由网络连接获得文件名、文件长度 ----------- */
-        ///由下载文件的URL网址建立网络连接
-        HttpURLConnection connection = HttpDownloadUtil.openConnection(mFileInfo.getFileUrl(), mConfig.connectTimeout);
+            ///处理网络连接的响应码，如果网络连接connection的响应码为200，则开始下载过程，否则抛出异常
+            HttpDownloadUtil.handleResponseCode(connection, HttpURLConnection.HTTP_OK);
 
-        ///处理网络连接的响应码，如果网络连接connection的响应码为200，则开始下载过程，否则抛出异常
-        HttpDownloadUtil.handleResponseCode(connection, HttpURLConnection.HTTP_OK);
+            ///由网络连接获得文件名
+            if (mFileInfo.getFileName().isEmpty()) {
+                mFileInfo.setFileName(HttpDownloadUtil.getUrlFileName(connection));
+            }
 
-        ///由网络连接获得文件名
-        if (mFileInfo.getFileName().isEmpty()) {
-            mFileInfo.setFileName(HttpDownloadUtil.getUrlFileName(connection));
+            ///由网络连接获得文件长度（建议用long类型，int类型最大为2GB）
+            mFileInfo.setFileSize(connection.getContentLength());
+
+            ///创建下载空文件
+            File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
+
+            ///如果保存文件存在则删除
+            if (saveFile.exists()) {
+                if (saveFile.delete());
+            }
+
+            randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile);
+            HttpDownloadUtil.randomAccessFileSetLength(randomAccessFile, mFileInfo.getFileSize());
+            if (DEBUG) Log.d(TAG, "InitThread# run()# 创建下载空文件成功: " + saveFile.getName());
+
+        } catch (DownloadException downloadException) {
+            ///更新下载文件状态：下载错误
+            mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+            mHandler.obtainMessage(DownloadHandler.MSG_ERROR, downloadException).sendToTarget();
+            return;
+        } finally {
+            ///关闭连接
+            if (connection != null) {
+                connection.disconnect();
+            }
+
+            ///关闭流Closeable
+            Util.closeIO(randomAccessFile);
         }
 
-        ///由网络连接获得文件长度（建议用long类型，int类型最大为2GB）
-        mFileInfo.setFileSize(connection.getContentLength());
-
-        ///创建下载空文件
-        File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
-        RandomAccessFile randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile);
-        HttpDownloadUtil.randomAccessFileSetLength(randomAccessFile, mFileInfo.getFileSize());
-        Log.d(TAG, "InitThread# run(): 创建下载空文件成功: " + saveFile.getName());
-
-        ///关闭连接
-        connection.disconnect();
-        ///关闭流Closeable
-        Util.closeIO(randomAccessFile);
 
 
         /* ----------- 获得下载文件的所有线程信息集合 ----------- */
@@ -105,10 +139,10 @@ public class InitThread extends Thread {
         );
 
         if (mDownloadTask.mThreadInfos.size() == 0) { ///如果数据库中没有
-            Log.d(TAG, "InitThread# run(): threadInfos.size() == 0");
+            if (DEBUG) Log.d(TAG, "InitThread# run()# threadInfos.size() == 0");
 
             ///重置mFileInfo的下载完的总字节数
-            Log.d(TAG, "InitThread# run(): 重置mFileInfo的FinishedBytes为0");
+            if (DEBUG) Log.d(TAG, "InitThread# run()# 重置mFileInfo的FinishedBytes为0");
             mFileInfo.setFinishedBytes(0);
 
             ///获得每个线程的长度
@@ -164,7 +198,7 @@ public class InitThread extends Thread {
 
 
         /* ----------- 发送消息：始化线程结束 ----------- */
-        Log.d(TAG, "InitThread# run(): ------- 发送消息：始化线程结束 -------");
+        if (DEBUG) Log.d(TAG, "InitThread# run()# ------- 发送消息：始化线程结束 -------");
         mHandler.obtainMessage(DownloadHandler.MSG_INIT).sendToTarget();
     }
 }

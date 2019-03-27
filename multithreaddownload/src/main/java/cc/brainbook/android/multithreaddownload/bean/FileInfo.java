@@ -1,6 +1,7 @@
 package cc.brainbook.android.multithreaddownload.bean;
 
 public class FileInfo {
+    public static final int FILE_STATUS_ERROR = -1;
     public static final int FILE_STATUS_NEW = 0;
     public static final int FILE_STATUS_INIT = 1;
     public static final int FILE_STATUS_START = 2;

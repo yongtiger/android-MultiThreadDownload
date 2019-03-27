@@ -7,12 +7,16 @@ import android.util.Log;
 import cc.brainbook.android.multithreaddownload.DownloadTask;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.db.ThreadDAO;
+import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 import cc.brainbook.android.multithreaddownload.interfaces.DownloadEvent;
 import cc.brainbook.android.multithreaddownload.interfaces.OnProgressListener;
+
+import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
 
 public class DownloadHandler extends Handler {
     private static final String TAG = "TAG";
 
+    public static final int MSG_ERROR = -1;
     public static final int MSG_INIT = 0;
     public static final int MSG_START = 1;
     public static final int MSG_PAUSE = 2;
@@ -43,7 +47,7 @@ public class DownloadHandler extends Handler {
     public void handleMessage(Message msg) {
         switch (msg.what) {
             case MSG_INIT:
-                Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_INIT");
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_INIT");
 
                 ///下载事件接口DownloadEvent
                 if (mDownloadEvent != null) {
@@ -52,7 +56,7 @@ public class DownloadHandler extends Handler {
 
                 break;
             case MSG_START:
-                Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_START");
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_START");
 
                 ///下载事件接口DownloadEvent
                 if (mDownloadEvent != null) {
@@ -61,7 +65,7 @@ public class DownloadHandler extends Handler {
 
                 break;
             case MSG_PAUSE:
-                Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_PAUSE");
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_PAUSE");
 
                 ///下载事件接口DownloadEvent
                 if (mDownloadEvent != null) {
@@ -70,10 +74,10 @@ public class DownloadHandler extends Handler {
 
                 break;
             case MSG_STOP:
-                Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_STOP");
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_STOP");
 
                 ///删除数据库中文件的所有线程信息
-                Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_STOP: 删除线程信息");
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_STOP: 删除线程信息");
                 mThreadDAO.deleteAllThread(mFileInfo.getFileUrl(), mFileInfo.getFileName(), mFileInfo.getFileSize(), mFileInfo.getSavePath());
 
                 ///下载停止回调接口DownloadCallback
@@ -83,7 +87,7 @@ public class DownloadHandler extends Handler {
 
                 break;
             case MSG_COMPLETE:
-                Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_COMPLETE");
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_COMPLETE");
 
                 ///下载完成回调接口DownloadEvent
                 if (mDownloadEvent != null) {
@@ -92,7 +96,7 @@ public class DownloadHandler extends Handler {
 
                 break;
             case MSG_PROGRESS:
-                Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_PROGRESS");
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage(): msg.what = MSG_PROGRESS");
 
                 ///下载进度回调接口DownloadEvent
                 if (mOnProgressListener != null) {
@@ -104,6 +108,20 @@ public class DownloadHandler extends Handler {
                         long diffFinishedBytes = ((long[]) msg.obj)[1];
                         mOnProgressListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos, diffTimeMillis, diffFinishedBytes);
                     }
+                }
+
+                break;
+            case MSG_ERROR:
+                DownloadException downloadException = (DownloadException) msg.obj;
+                if (downloadException.getCause() == null) {
+                    if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_ERROR: " + downloadException.getMessage());
+                } else {
+                    if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_ERROR: " + downloadException.getMessage() + "\n" + downloadException.getCause().getMessage());
+                }
+
+                ///下载错误回调接口DownloadEvent
+                if (mDownloadEvent != null) {
+                    mDownloadEvent.onError(mFileInfo, mDownloadTask.mThreadInfos, downloadException);
                 }
 
                 break;
