@@ -304,31 +304,35 @@ public class DownloadTask {
         ///[FIX BUG: 暂停或完成后出现多次重复的消息通知！]
         ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
         ///https://www.cnblogs.com/dolphin0520/p/3920397.html
-        CyclicBarrier barrierPause  = new CyclicBarrier(notCompleteThreadInfos.size(), new Runnable() {
+        CyclicBarrier barrierPauseOrComplete  = new CyclicBarrier(notCompleteThreadInfos.size(), new Runnable() {
             @Override
             public void run() {
-                ///发送消息：下载暂停
-                if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPause:  ------- 发送消息：下载暂停 -------");
-                mHandler.obtainMessage(DownloadHandler.MSG_PAUSE).sendToTarget();
+                ///遍历所有下载线程信息，如果存在未完成状态（即暂停状态），则说明下载文件信息状态是暂停状态，否则就应该是完成状态
+                boolean statusComplete = true;
+                for (ThreadInfo threadInfo : mThreadInfos) {
+                    if (threadInfo.getStatus() != ThreadInfo.THREAD_STATUS_COMPLETE) {
+                        statusComplete = false;
+                        break;
+                    }
+                }
 
-                ///[FIX BUG# 下载完成后取消定时器，进度更新显示99%]可以取消定时器Timer
-                if (DEBUG) Log.d(TAG, "DownloadTask# innerStart(): CyclicBarrier barrierPause# 可以取消定时器Timer");
-                mayStopTimer = true;
-            }
-        });
-        CyclicBarrier barrierComplete  = new CyclicBarrier(notCompleteThreadInfos.size(), new Runnable() {
-            @Override
-            public void run() {
-                ///更新下载文件状态：下载完成
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
+                if (statusComplete) {
+                    ///更新下载文件状态：下载完成
+                    mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
+
+                    ///发送消息：下载完成
+                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart(): CyclicBarrier barrierComplete#  ------- 发送消息：下载完成 -------");
+                    mHandler.obtainMessage(DownloadHandler.MSG_COMPLETE).sendToTarget();
+                } else {
+                    ///发送消息：下载暂停
+                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete:  ------- 发送消息：下载暂停 -------");
+                    mHandler.obtainMessage(DownloadHandler.MSG_PAUSE).sendToTarget();
+                }
 
                 ///[FIX BUG# 下载完成后取消定时器，进度更新显示99%]可以取消定时器Timer
                 if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierComplete: 可以取消定时器Timer");
                 mayStopTimer = true;
 
-                ///发送消息：下载完成
-                if (DEBUG) Log.d(TAG, "DownloadTask# innerStart(): CyclicBarrier barrierComplete#  ------- 发送消息：下载完成 -------");
-                mHandler.obtainMessage(DownloadHandler.MSG_COMPLETE).sendToTarget();
             }
         });
 
@@ -340,8 +344,7 @@ public class DownloadTask {
                     mFileInfo,
                     threadInfo,
                     mThreadDAO,
-                    barrierPause,
-                    barrierComplete
+                    barrierPauseOrComplete
             );
             ///线程池
 //            downloadThread.start();
@@ -370,7 +373,7 @@ public class DownloadTask {
 
                 if (mOnProgressListener != null) {
                     ///发送消息：更新下载进度
-                    if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 发送消息：更新进度 -------");
+                    if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 发送消息：更新进度 -------" + mayStopTimer);
                     long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
                     currentTimeMillis = System.currentTimeMillis();
                     long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
@@ -416,7 +419,6 @@ public class DownloadTask {
             case FileInfo.FILE_STATUS_START:
                 ///更新下载文件状态：下载暂停
                 if (DEBUG) Log.d(TAG, "DownloadTask# pause()# 更新下载文件状态：mFileInfo.setStatus(FileInfo.FILE_STATUS_PAUSE)");
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_PAUSE);
 
                 break;
             case FileInfo.FILE_STATUS_PAUSE:

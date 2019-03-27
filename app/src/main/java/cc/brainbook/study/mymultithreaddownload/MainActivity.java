@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
                 .setFileUrl("http://ljdy.tv/app/ljdy.apk")
                 .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
-                .setThreadCount(10)
+                .setThreadCount(3)
                 .setOnProgressListener(new OnProgressListener() {   ///设置进度监听（可选）
                     @Override
                     public void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes) {

@@ -28,24 +28,21 @@ public class DownloadThread extends Thread {
     private FileInfo mFileInfo;
     private ThreadInfo mThreadInfo;
     private ThreadDAO mThreadDAO;
-    private CyclicBarrier mBarrierPause;
-    private CyclicBarrier mBarrierComplete;
+    private CyclicBarrier mBarrierPauseOrComplete;
 
     public DownloadThread(DownloadTask downloadTask,
                           Config config,
                           FileInfo fileInfo,
                           ThreadInfo threadInfo,
                           ThreadDAO threadDAO,
-                          CyclicBarrier barrierPause,
-                          CyclicBarrier barrierComplete
+                          CyclicBarrier barrierPauseOrComplete
     ) {
         this.mDownloadTask = downloadTask;
         this.mConfig = config;
         this.mFileInfo = fileInfo;
         this.mThreadInfo = threadInfo;
         this.mThreadDAO = threadDAO;
-        this.mBarrierPause = barrierPause;
-        this.mBarrierComplete = barrierComplete;
+        this.mBarrierPauseOrComplete = barrierPauseOrComplete;
     }
 
     @Override
@@ -122,7 +119,7 @@ public class DownloadThread extends Thread {
                     ///判断所有下载线程是否暂停，并做相应处理
                     ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
                     ///https://www.cnblogs.com/dolphin0520/p/3920397.html
-                    mBarrierPause.await();
+                    mBarrierPauseOrComplete.await();
 
                     return;
                 } else if (mFileInfo.getStatus() == FileInfo.FILE_STATUS_STOP) {   ///停止下载线程
@@ -143,7 +140,7 @@ public class DownloadThread extends Thread {
             ///判断所有下载线程是否完成，并做相应处理
             ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
             ///https://www.cnblogs.com/dolphin0520/p/3920397.html
-            mBarrierComplete.await();
+            mBarrierPauseOrComplete.await();
 
         } catch (BrokenBarrierException e) {
             e.printStackTrace();

@@ -79,7 +79,7 @@ public class ThreadDAOImpl implements ThreadDAO {
     }
 
     @Override
-    public List<ThreadInfo> getAllThreads(String fileUrl, String fileName, long fileSize, String savePath) {
+    public synchronized List<ThreadInfo> getAllThreads(String fileUrl, String fileName, long fileSize, String savePath) {
         List<ThreadInfo> list = new ArrayList<>();
         SQLiteDatabase db = mHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery("select * from thread_info where file_url=? and file_name=? and file_size=? and save_path=?",
