@@ -321,7 +321,7 @@ public class DownloadTask {
                     mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
 
                     ///发送消息：下载完成
-                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart(): CyclicBarrier barrierPauseOrComplete#  ------- 发送消息：下载完成 -------");
+                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete#  ------- 发送消息：下载完成 -------");
                     mHandler.obtainMessage(DownloadHandler.MSG_COMPLETE).sendToTarget();
                 } else {
                     ///发送消息：下载暂停
@@ -373,7 +373,7 @@ public class DownloadTask {
 
                 if (mOnProgressListener != null) {
                     ///发送消息：更新下载进度
-                    if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 发送消息：更新进度 -------" + mayStopTimer);
+                    if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 发送消息：更新进度 -------");
                     long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
                     currentTimeMillis = System.currentTimeMillis();
                     long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
