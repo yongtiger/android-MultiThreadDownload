@@ -321,7 +321,7 @@ public class DownloadTask {
                     mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
 
                     ///发送消息：下载完成
-                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart(): CyclicBarrier barrierComplete#  ------- 发送消息：下载完成 -------");
+                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart(): CyclicBarrier barrierPauseOrComplete#  ------- 发送消息：下载完成 -------");
                     mHandler.obtainMessage(DownloadHandler.MSG_COMPLETE).sendToTarget();
                 } else {
                     ///发送消息：下载暂停
@@ -330,7 +330,7 @@ public class DownloadTask {
                 }
 
                 ///[FIX BUG# 下载完成后取消定时器，进度更新显示99%]可以取消定时器Timer
-                if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierComplete: 可以取消定时器Timer");
+                if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete: 可以取消定时器Timer");
                 mayStopTimer = true;
 
             }
