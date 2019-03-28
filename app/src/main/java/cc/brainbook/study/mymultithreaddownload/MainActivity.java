@@ -46,18 +46,17 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
 
         mTextView = findViewById(R.id.tvTextView);
 
-//        ///Android 6.0以上版本必须动态设置权限
-//        if (ContextCompat.checkSelfPermission(this,
-//                Manifest.permission.WRITE_EXTERNAL_STORAGE)
-//                != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(this,
-//                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-//                    1);
-//        } else {
-//            init();
-//        }
+        ///Android 6.0以上版本必须动态设置权限
+        if (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    1);
+        } else {
+            init();
+        }
 
-        init();
     }
 
     ///https://developer.android.com/training/permissions/requesting?hl=zh-cn#handle-response

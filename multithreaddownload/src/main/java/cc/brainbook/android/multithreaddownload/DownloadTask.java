@@ -284,7 +284,7 @@ public class DownloadTask {
         }
 
         ///遍历下载线程信息集合，找出所有未完成的下载线程信息
-        ArrayList<ThreadInfo> notCompleteThreadInfos = new ArrayList<>();
+        final ArrayList<ThreadInfo> notCompleteThreadInfos = new ArrayList<>();
         for (ThreadInfo threadInfo : mThreadInfos) {
             if (threadInfo.getStatus() != ThreadInfo.THREAD_STATUS_COMPLETE) {
                 notCompleteThreadInfos.add(threadInfo);
@@ -312,7 +312,7 @@ public class DownloadTask {
             public void run() {
                 ///遍历所有下载线程信息，如果存在未完成状态（即暂停状态），则说明下载文件信息状态是暂停状态，否则就应该是完成状态
                 boolean statusComplete = true;
-                for (ThreadInfo threadInfo : mThreadInfos) {
+                for (ThreadInfo threadInfo : notCompleteThreadInfos) {
                     if (threadInfo.getStatus() != ThreadInfo.THREAD_STATUS_COMPLETE) {
                         statusComplete = false;
                         break;
@@ -330,12 +330,17 @@ public class DownloadTask {
                     ///发送消息：下载暂停
                     if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete:  ------- 发送消息：下载暂停 -------");
                     mHandler.obtainMessage(DownloadHandler.MSG_PAUSE).sendToTarget();
+
+                    ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
+                    synchronized (lock) {
+                        if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete: lock.notify() ............................");
+                        lock.notify();
+                    }
                 }
 
                 ///[FIX BUG# 下载完成后取消定时器，进度更新显示99%]可以取消定时器Timer
                 if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete: 可以取消定时器Timer");
                 mayStopTimer = true;
-
             }
         });
 
@@ -401,6 +406,7 @@ public class DownloadTask {
         }
     }
 
+    private final Object lock = new Object();
     /**
      * 暂停下载
      */
@@ -425,6 +431,18 @@ public class DownloadTask {
             case FileInfo.FILE_STATUS_START:
                 ///更新下载文件状态：下载暂停
                 if (DEBUG) Log.d(TAG, "DownloadTask# pause()# 更新下载文件状态：mFileInfo.setStatus(FileInfo.FILE_STATUS_PAUSE)");
+                mFileInfo.setStatus(FileInfo.FILE_STATUS_PAUSE);
+
+                ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
+                synchronized (lock) {
+                    try {
+                        if (DEBUG) Log.d(TAG, "DownloadTask# pause()# wait ............................");
+                        lock.wait();
+                        if (DEBUG) Log.d(TAG, "DownloadTask# pause()# notified ............................");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
 
                 break;
             case FileInfo.FILE_STATUS_PAUSE:
