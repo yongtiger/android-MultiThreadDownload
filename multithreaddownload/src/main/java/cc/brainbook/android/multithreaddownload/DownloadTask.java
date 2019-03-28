@@ -231,8 +231,6 @@ public class DownloadTask {
 
         switch (mFileInfo.getStatus()) {
             case FileInfo.FILE_STATUS_ERROR:
-                ///执行下载过程
-                innerStart();
 
                 break;
             case FileInfo.FILE_STATUS_NEW:
