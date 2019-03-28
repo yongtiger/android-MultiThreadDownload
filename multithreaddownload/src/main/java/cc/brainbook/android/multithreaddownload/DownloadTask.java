@@ -225,6 +225,9 @@ public class DownloadTask {
         if (DEBUG) Log.d(TAG, "DownloadTask# start()# ");
 
         switch (mFileInfo.getStatus()) {
+            case FileInfo.FILE_STATUS_ERROR:
+
+                break;
             case FileInfo.FILE_STATUS_NEW:
                 ///更新下载文件状态：下载错误
                 mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
@@ -405,6 +408,9 @@ public class DownloadTask {
         if (DEBUG) Log.d(TAG, "DownloadTask# pause()# ");
 
         switch (mFileInfo.getStatus()) {
+            case FileInfo.FILE_STATUS_ERROR:
+
+                break;
             case FileInfo.FILE_STATUS_NEW:
                 ///更新下载文件状态：下载错误
                 mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
@@ -440,6 +446,9 @@ public class DownloadTask {
         if (DEBUG) Log.d(TAG, "DownloadTask# stop()# ");
 
         switch (mFileInfo.getStatus()) {
+            case FileInfo.FILE_STATUS_ERROR:
+
+                break;
             case FileInfo.FILE_STATUS_NEW:
                 ///更新下载文件状态：下载错误
                 mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);

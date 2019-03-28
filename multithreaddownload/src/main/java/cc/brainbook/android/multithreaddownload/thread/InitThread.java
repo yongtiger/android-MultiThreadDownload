@@ -4,12 +4,9 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
-import java.nio.channels.FileChannel;
 
 import cc.brainbook.android.multithreaddownload.DownloadTask;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
@@ -82,10 +79,11 @@ public class InitThread extends Thread {
             }
         }
 
+
+        /* ----------- 由网络连接获得文件名、文件长度，并创建下载空文件 ----------- */
         HttpURLConnection connection = null;
         RandomAccessFile randomAccessFile = null;
         try {
-            /* ----------- 由网络连接获得文件名、文件长度 ----------- */
             ///由下载文件的URL网址建立网络连接
             connection = HttpDownloadUtil.openConnection(mFileInfo.getFileUrl(), mConfig.connectTimeout);
 
@@ -93,19 +91,24 @@ public class InitThread extends Thread {
             HttpDownloadUtil.handleResponseCode(connection, HttpURLConnection.HTTP_OK);
 
             ///由网络连接获得文件名
-            if (mFileInfo.getFileName().isEmpty()) {
+            if (TextUtils.isEmpty(mFileInfo.getFileName())) {
                 mFileInfo.setFileName(HttpDownloadUtil.getUrlFileName(connection));
             }
 
             ///由网络连接获得文件长度（建议用long类型，int类型最大为2GB）
             mFileInfo.setFileSize(connection.getContentLength());
+            if (mFileInfo.getFileSize() <= 0) {
+                throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file size is not valid: " + mFileInfo.getFileSize());
+            }
 
             ///创建下载空文件
             File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
 
             ///如果保存文件存在则删除
             if (saveFile.exists()) {
-                if (saveFile.delete());
+                if (!saveFile.delete()) {
+                    throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file cannot be deleted: " + saveFile);
+                }
             }
 
             randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile);
@@ -128,7 +131,6 @@ public class InitThread extends Thread {
         }
 
 
-
         /* ----------- 获得下载文件的所有线程信息集合 ----------- */
         ///从数据库获得下载文件的所有线程信息集合
         mDownloadTask.mThreadInfos = mThreadDAO.getAllThreads(
@@ -145,50 +147,13 @@ public class InitThread extends Thread {
             if (DEBUG) Log.d(TAG, "InitThread# run()# 重置mFileInfo的FinishedBytes为0");
             mFileInfo.setFinishedBytes(0);
 
-            ///获得每个线程的长度
-            long length = mFileInfo.getFileSize() / mConfig.threadCount;
-
-            ///遍历每个线程
-            for (int i = 0; i < mConfig.threadCount; i++) {
-                ///创建线程信息
-                ThreadInfo threadInfo = new ThreadInfo (
-                        ThreadInfo.THREAD_STATUS_NEW,
-                        0,
-                        0,
-                        i * length,
-                        (i + 1) * length - 1,
-                        mFileInfo.getFileUrl(),
-                        mFileInfo.getFileName(),
-                        mFileInfo.getFileSize(),
-                        mFileInfo.getSavePath()
-                );
-
-                ///处理最后一个线程（可能存在除不尽的情况）
-                if (i == mConfig.threadCount - 1) {
-                    threadInfo.setEnd(mFileInfo.getFileSize() - 1);
-                }
-
-                ///向数据库插入线程信息
-                long threadId = mThreadDAO.insertThread(threadInfo);
-                threadInfo.setId(threadId);
-
-                ///设置线程信息的状态为THREAD_STATUS_INIT
-                threadInfo.setStatus(ThreadInfo.THREAD_STATUS_INIT);
-
-                ///添加到线程信息集合中
-                mDownloadTask.mThreadInfos.add(threadInfo);
-            }
+            ///根据线程数量创建下载线程，并添加到下载信息集合中
+            createToThreadInfos(mConfig.threadCount);
         } else {
             ///重置mFileInfo的下载完的总字节数
-            for (ThreadInfo threadInfo : mDownloadTask.mThreadInfos) {
-                if (threadInfo.getEnd() - threadInfo.getStart() + 1 == threadInfo.getFinishedBytes()) {
-                    threadInfo.setStatus(ThreadInfo.THREAD_STATUS_COMPLETE);
-                } else {
-                    threadInfo.setStatus(ThreadInfo.THREAD_STATUS_PAUSE);
-                }
-                mFileInfo.setFinishedBytes(mFileInfo.getFinishedBytes() + threadInfo.getFinishedBytes());
-            }
+            setFileInfoFinishedBytes();
 
+            ///根据下载文件信息的完成字节总数，判断该下载文件信息的状态是完成（FILE_STATUS_COMPLETE）还是暂停（FILE_STATUS_PAUSE）
             if (mFileInfo.getFinishedBytes() == mFileInfo.getFileSize()) {
                 mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
             } else {
@@ -200,5 +165,64 @@ public class InitThread extends Thread {
         /* ----------- 发送消息：始化线程结束 ----------- */
         if (DEBUG) Log.d(TAG, "InitThread# run()# ------- 发送消息：始化线程结束 -------");
         mHandler.obtainMessage(DownloadHandler.MSG_INIT).sendToTarget();
+    }
+
+    /**
+     * 根据线程数量创建下载线程，并添加到下载信息集合中
+     *
+     * @param threadCount
+     */
+    private void createToThreadInfos(int threadCount) {
+        ///获得每个线程的长度
+        long length = mFileInfo.getFileSize() / threadCount;
+
+        ///遍历每个线程
+        for (int i = 0; i < threadCount; i++) {
+            ///创建线程信息
+            ThreadInfo threadInfo = new ThreadInfo (
+                    ThreadInfo.THREAD_STATUS_NEW,
+                    0,
+                    0,
+                    i * length,
+                    (i + 1) * length - 1,
+                    mFileInfo.getFileUrl(),
+                    mFileInfo.getFileName(),
+                    mFileInfo.getFileSize(),
+                    mFileInfo.getSavePath()
+            );
+
+            ///处理最后一个线程（可能存在除不尽的情况）
+            if (i == threadCount - 1) {
+                threadInfo.setEnd(mFileInfo.getFileSize() - 1);
+            }
+
+            ///向数据库插入线程信息
+            long threadId = mThreadDAO.insertThread(threadInfo);
+            threadInfo.setId(threadId);
+
+            ///设置线程信息的状态为THREAD_STATUS_INIT
+            threadInfo.setStatus(ThreadInfo.THREAD_STATUS_INIT);
+
+            ///添加到线程信息集合中
+            mDownloadTask.mThreadInfos.add(threadInfo);
+        }
+    }
+
+    /**
+     * 重置mFileInfo的下载完的总字节数
+     */
+    private void setFileInfoFinishedBytes() {
+        for (ThreadInfo threadInfo : mDownloadTask.mThreadInfos) {
+            ///计算每个下载线程信息的状态
+            ///??????考虑在thread_info数据表中加入status字段保存，这样就不必每次都计算了
+            if (threadInfo.getEnd() - threadInfo.getStart() + 1 == threadInfo.getFinishedBytes()) {
+                threadInfo.setStatus(ThreadInfo.THREAD_STATUS_COMPLETE);
+            } else {
+                threadInfo.setStatus(ThreadInfo.THREAD_STATUS_PAUSE);
+            }
+
+            ///重置mFileInfo的下载完的总字节数
+            mFileInfo.setFinishedBytes(mFileInfo.getFinishedBytes() + threadInfo.getFinishedBytes());
+        }
     }
 }

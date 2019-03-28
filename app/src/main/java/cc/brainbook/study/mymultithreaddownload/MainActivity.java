@@ -46,16 +46,18 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
 
         mTextView = findViewById(R.id.tvTextView);
 
-        ///Android 6.0以上版本必须动态设置权限
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    1);
-        } else {
-            init();
-        }
+//        ///Android 6.0以上版本必须动态设置权限
+//        if (ContextCompat.checkSelfPermission(this,
+//                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+//                != PackageManager.PERMISSION_GRANTED) {
+//            ActivityCompat.requestPermissions(this,
+//                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+//                    1);
+//        } else {
+//            init();
+//        }
+
+        init();
     }
 
     ///https://developer.android.com/training/permissions/requesting?hl=zh-cn#handle-response
@@ -105,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
         ///实例化DownloadTask时传入Context引用，方便操作（但要留意引起内存泄漏！）
         mDownloadTask = new DownloadTask(getApplicationContext())
                 .setFileUrl("http://ljdy.tv/app/ljdy.apk")
-                .setFileName("ljdy.apk")
+//                .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
                 .setThreadCount(3)
                 .setOnProgressListener(new OnProgressListener() {   ///设置进度监听（可选）
@@ -241,36 +243,32 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
     public void onError(FileInfo fileInfo, List<ThreadInfo> threadInfos, DownloadException downloadException) {
         if (downloadException.getCause() == null) {
             Log.d(TAG, "MainActivity# onError()# downloadException.getCode(): " + downloadException.getCode() + ", " + downloadException.getMessage());
+            Toast.makeText(this, downloadException.getMessage(), Toast.LENGTH_LONG).show();
         } else {
             Log.d(TAG, "MainActivity# onError()# downloadException.getCode(): " + downloadException.getCode() + ", " + downloadException.getMessage() + "\n" + downloadException.getCause().getMessage());
-
+            Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
         }
 
         if (DownloadException.EXCEPTION_FILE_URL_NULL == downloadException.getCode()) {
-            Toast.makeText(this, downloadException.getMessage(), Toast.LENGTH_LONG).show();
-        } else
-        if (DownloadException.EXCEPTION_SAVE_PATH_MKDIR == downloadException.getCode()) {
-            Toast.makeText(this, downloadException.getMessage(), Toast.LENGTH_LONG).show();
-        }
-        ///当URL为null或无效网络连接协议时：java.net.MalformedURLException: Protocol not found
-        if (DownloadException.EXCEPTION_NETWORK_MALFORMED_URL == downloadException.getCode()) {
-            Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
-        } else
+
+        } else if (DownloadException.EXCEPTION_SAVE_PATH_MKDIR == downloadException.getCode()) {
+
+        } else if (DownloadException.EXCEPTION_NETWORK_MALFORMED_URL == downloadException.getCode()) {
+            ///当URL为null或无效网络连接协议时：java.net.MalformedURLException: Protocol not found
+
+        } else if (DownloadException.EXCEPTION_NETWORK_UNKNOWN_HOST == downloadException.getCode()) {
             ///URL虽然以http://或https://开头、但host为空或无效host
             ///     java.net.UnknownHostException: http://
             ///     java.net.UnknownHostException: Unable to resolve host "aaa": No address associated with hostname
-            if (DownloadException.EXCEPTION_NETWORK_UNKNOWN_HOST == downloadException.getCode()) {
-                Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
-            } else
-                ///如果没有网络连接
-                if (DownloadException.EXCEPTION_NETWORK_IO_EXCEPTION == downloadException.getCode()) {
-                    Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
 
-                    ///开启Wifi网络设置页面
-//                    startWifiSettingsActivity();
-                } else {
-                    Toast.makeText(this, downloadException.getMessage() + "\n" + downloadException.getCause().getMessage(), Toast.LENGTH_LONG).show();
-                }
+        } else if (DownloadException.EXCEPTION_NETWORK_IO_EXCEPTION == downloadException.getCode()) {
+                ///如果没有网络连接
+
+                ///开启Wifi网络设置页面
+//                startWifiSettingsActivity();
+        } else {
+
+        }
     }
 
 }

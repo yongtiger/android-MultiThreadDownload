@@ -51,6 +51,7 @@ public class HttpDownloadUtil {
         HttpURLConnection connection;
         try {
             connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Accept-Encoding", "identity");
         } catch (UnknownHostException e) {
             ///URL虽然以http://或https://开头、但host为空或无效host
             ///     java.net.UnknownHostException: http://
@@ -124,6 +125,8 @@ public class HttpDownloadUtil {
      */
     public static String getUrlFileName(HttpURLConnection connection) {
         String filename = "";
+        if (connection == null) return filename;
+
         String disposition = connection.getHeaderField("Content-Disposition");
         if (disposition != null) {
             // extracts file name from header field
@@ -134,10 +137,16 @@ public class HttpDownloadUtil {
             }
         }
         if (filename.length() == 0) {
-            String path = connection.getURL().getPath();
-            filename = new File(path).getName();
+            URL url = connection.getURL();
+            String path = "";
+            if (url != null) {
+                path = url.getPath();
+            }
+            if (path.length() > 0) {
+                filename = new File(path).getName();
+            }
         }
-        if (filename.isEmpty()) {
+        if (filename.length() == 0) {
             throw new DownloadException(DownloadException.EXCEPTION_FILE_NAME_NULL, "The file name cannot be null.");
         }
         return filename;
