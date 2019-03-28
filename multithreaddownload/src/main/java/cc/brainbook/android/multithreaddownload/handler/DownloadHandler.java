@@ -112,16 +112,13 @@ public class DownloadHandler extends Handler {
 
                 break;
             case MSG_ERROR:
-                DownloadException downloadException = (DownloadException) msg.obj;
-                if (downloadException.getCause() == null) {
-                    if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_ERROR: " + downloadException.getMessage());
-                } else {
-                    if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_ERROR: " + downloadException.getMessage() + "\n" + downloadException.getCause().getMessage());
-                }
+                ///更新下载文件状态：下载错误
+                if (DEBUG) Log.d(TAG, "更新下载文件状态：mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR)");
+                mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
 
                 ///下载错误回调接口DownloadEvent
                 if (mDownloadEvent != null) {
-                    mDownloadEvent.onError(mFileInfo, mDownloadTask.mThreadInfos, downloadException);
+                    mDownloadEvent.onError(mFileInfo, mDownloadTask.mThreadInfos, (Exception) msg.obj);
                 }
 
                 break;

@@ -15,6 +15,8 @@ import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
 import cc.brainbook.android.multithreaddownload.db.ThreadDAO;
+import cc.brainbook.android.multithreaddownload.exception.DownloadException;
+import cc.brainbook.android.multithreaddownload.handler.DownloadHandler;
 import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
 import cc.brainbook.android.multithreaddownload.util.Util;
 
@@ -26,6 +28,7 @@ public class DownloadThread extends Thread {
     private DownloadTask mDownloadTask;
     private Config mConfig;
     private FileInfo mFileInfo;
+    private DownloadHandler mHandler;
     private ThreadInfo mThreadInfo;
     private ThreadDAO mThreadDAO;
     private CyclicBarrier mBarrierPauseOrComplete;
@@ -33,6 +36,7 @@ public class DownloadThread extends Thread {
     public DownloadThread(DownloadTask downloadTask,
                           Config config,
                           FileInfo fileInfo,
+                          DownloadHandler handler,
                           ThreadInfo threadInfo,
                           ThreadDAO threadDAO,
                           CyclicBarrier barrierPauseOrComplete
@@ -40,6 +44,7 @@ public class DownloadThread extends Thread {
         this.mDownloadTask = downloadTask;
         this.mConfig = config;
         this.mFileInfo = fileInfo;
+        this.mHandler = handler;
         this.mThreadInfo = threadInfo;
         this.mThreadDAO = threadDAO;
         this.mBarrierPauseOrComplete = barrierPauseOrComplete;
@@ -142,10 +147,9 @@ public class DownloadThread extends Thread {
             ///https://www.cnblogs.com/dolphin0520/p/3920397.html
             mBarrierPauseOrComplete.await();
 
-        } catch (BrokenBarrierException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            ///发送消息：下载错误
+            mHandler.obtainMessage(DownloadHandler.MSG_ERROR, e).sendToTarget();
         } finally {
             ///关闭连接
             if (connection != null) {

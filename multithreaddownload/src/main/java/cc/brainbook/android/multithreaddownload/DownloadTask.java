@@ -224,13 +224,19 @@ public class DownloadTask {
     public void start() {
         if (DEBUG) Log.d(TAG, "DownloadTask# start()# ");
 
+        ///下载线程信息集合必须存在且不为空
+        if (mThreadInfos == null || mThreadInfos.isEmpty()) {
+            return;
+        }
+
         switch (mFileInfo.getStatus()) {
             case FileInfo.FILE_STATUS_ERROR:
+                ///执行下载过程
+                innerStart();
 
                 break;
             case FileInfo.FILE_STATUS_NEW:
-                ///更新下载文件状态：下载错误
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+                ///发送消息：下载错误
                 mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
                         new DownloadException(DownloadException.EXCEPTION_NO_INIT, "DownloadTask Init expected."))
                         .sendToTarget();
@@ -278,11 +284,6 @@ public class DownloadTask {
     }
 
     private void innerStart() {
-        ///下载线程信息集合必须存在且不为空
-        if (mThreadInfos.isEmpty()) {
-            return;
-        }
-
         ///遍历下载线程信息集合，找出所有未完成的下载线程信息
         final ArrayList<ThreadInfo> notCompleteThreadInfos = new ArrayList<>();
         for (ThreadInfo threadInfo : mThreadInfos) {
@@ -350,6 +351,7 @@ public class DownloadTask {
                     this,
                     mConfig,
                     mFileInfo,
+                    mHandler,
                     threadInfo,
                     mThreadDAO,
                     barrierPauseOrComplete
@@ -406,7 +408,9 @@ public class DownloadTask {
         }
     }
 
+    ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
     private final Object lock = new Object();
+
     /**
      * 暂停下载
      */
@@ -418,8 +422,7 @@ public class DownloadTask {
 
                 break;
             case FileInfo.FILE_STATUS_NEW:
-                ///更新下载文件状态：下载错误
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+                ///发送消息：下载错误
                 mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
                         new DownloadException(DownloadException.EXCEPTION_NO_INIT, "DownloadTask Init expected."))
                         .sendToTarget();
@@ -429,10 +432,6 @@ public class DownloadTask {
 
                 break;
             case FileInfo.FILE_STATUS_START:
-                ///更新下载文件状态：下载暂停
-                if (DEBUG) Log.d(TAG, "DownloadTask# pause()# 更新下载文件状态：mFileInfo.setStatus(FileInfo.FILE_STATUS_PAUSE)");
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_PAUSE);
-
                 ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
                 synchronized (lock) {
                     try {
@@ -468,8 +467,7 @@ public class DownloadTask {
 
                 break;
             case FileInfo.FILE_STATUS_NEW:
-                ///更新下载文件状态：下载错误
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+                ///发送消息：下载错误
                 mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
                         new DownloadException(DownloadException.EXCEPTION_NO_INIT, "DownloadTask Init expected."))
                         .sendToTarget();

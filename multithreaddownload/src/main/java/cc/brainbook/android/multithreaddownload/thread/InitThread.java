@@ -59,8 +59,7 @@ public class InitThread extends Thread {
 
         /* ----------- 检验文件网址URL、保存目录 ----------- */
         if (TextUtils.isEmpty(mFileInfo.getFileUrl())) {
-            ///更新下载文件状态：下载错误
-            mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+            ///发送消息：下载错误
             mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
                     new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, "The file url cannot be null."))
                     .sendToTarget();
@@ -70,8 +69,7 @@ public class InitThread extends Thread {
             mFileInfo.setSavePath(Util.getDefaultFilesDirPath(mContext));
         } else {
             if (!Util.mkdirs(mFileInfo.getSavePath())) {
-                ///更新下载文件状态：下载错误
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
+                ///发送消息：下载错误
                 mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
                         new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The file save path cannot be made: " + mFileInfo.getSavePath()))
                         .sendToTarget();
@@ -86,6 +84,9 @@ public class InitThread extends Thread {
         try {
             ///由下载文件的URL网址建立网络连接
             connection = HttpDownloadUtil.openConnection(mFileInfo.getFileUrl(), mConfig.connectTimeout);
+
+            ///进行网络连接
+            HttpDownloadUtil.connect(connection);
 
             ///处理网络连接的响应码，如果网络连接connection的响应码为200，则开始下载过程，否则抛出异常
             HttpDownloadUtil.handleResponseCode(connection, HttpURLConnection.HTTP_OK);
@@ -115,10 +116,9 @@ public class InitThread extends Thread {
             HttpDownloadUtil.randomAccessFileSetLength(randomAccessFile, mFileInfo.getFileSize());
             if (DEBUG) Log.d(TAG, "InitThread# run()# 创建下载空文件成功: " + saveFile.getName());
 
-        } catch (DownloadException downloadException) {
-            ///更新下载文件状态：下载错误
-            mFileInfo.setStatus(FileInfo.FILE_STATUS_ERROR);
-            mHandler.obtainMessage(DownloadHandler.MSG_ERROR, downloadException).sendToTarget();
+        } catch (Exception e) {
+            ///发送消息：下载错误
+            mHandler.obtainMessage(DownloadHandler.MSG_ERROR, e).sendToTarget();
             return;
         } finally {
             ///关闭连接
