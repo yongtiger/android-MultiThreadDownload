@@ -11,6 +11,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
@@ -18,8 +19,7 @@ import cc.brainbook.android.multithreaddownload.db.ThreadDAO;
 import cc.brainbook.android.multithreaddownload.db.ThreadDAOImpl;
 import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 import cc.brainbook.android.multithreaddownload.handler.DownloadHandler;
-import cc.brainbook.android.multithreaddownload.interfaces.DownloadEvent;
-import cc.brainbook.android.multithreaddownload.interfaces.OnProgressListener;
+import cc.brainbook.android.multithreaddownload.listener.DownloadListener;
 import cc.brainbook.android.multithreaddownload.thread.DownloadThread;
 import cc.brainbook.android.multithreaddownload.thread.InitThread;
 
@@ -39,10 +39,9 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 注意：建议不要太大，取值范围不超过50！否则系统不再分配线程，造成其余下载线程仍处于初始化状态而不能进入运行状态
  *
  * 2）断点续传
- * 下载运行时按暂停或关闭Activity退出应用，自动保存断点，下次点击开始下载按钮（或开启Activity后点击开始下载按钮）自动从断点处继续下载
- * 当点击停止按钮，文件下载信息（即断点）从数据库删除。用户也可以覆写DownloadEvent#onStop(FileInfo fileInfo, List<ThreadInfo> threadInfos)删除下载文件
- * 注意：只保留下载暂停时的文件下载信息（即断点）到数据库[//////??????有待改进：任何运行状态期间按照定时器周期保存断点（影响效率！）]
- * 注意：Activity退出后应调用下载暂停来保存下载文件信息（即断点）到数据库
+ * 下载运行时按暂停或关闭Activity时，自动保存断点，下次点击开始下载按钮（或开启Activity后点击开始下载按钮）自动从断点处继续下载
+ * 当点击停止按钮，文件下载信息（即断点）从数据库删除，同时删除下载文件
+ * 注意：Activity销毁后应在onDestroy()调用下载暂停来保存下载文件信息（即断点）到数据库
  *
  * 3）链式set方法设置
  *
@@ -59,7 +58,7 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 1.3）配置下载文件名（可选）
  * 可通过DownloadTask#setFileName(String fileName)设置
  * 如果用户不配置，则尝试从下载连接connection中获得下载文件的文件名HttpDownloadUtil.getUrlFileName(HttpURLConnection connection)
- * 考虑到下载文件网址中不一定含有文件名，所有不考虑从网址中获取！
+ * 注意：考虑到下载文件网址中不一定含有文件名，所有不考虑从网址中获取！
  * 1.4）下载文件保存目录（可选）
  * 默认为系统SD卡的下载目录context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)，参考：Util.getDefaultFilesDir(Context context)
  * 可通过DownloadTask#setSavePath(String savePath)设置
@@ -72,12 +71,10 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 也可用fileInfo.getFinishedTimeMillis()获取实时的下载耗时（暂停期间不计！）
  * threadInfos提供了全部下载线程信息（比如，可实现分段详细显示下载进度条）
  *
- * 3）下载事件接口DownloadEvent（可选）
- *      void onInit(FileInfo fileInfo, List<ThreadInfo> threadInfos)
- *      void onStart(FileInfo fileInfo, List<ThreadInfo> threadInfos)
- *      void onPause(FileInfo fileInfo, List<ThreadInfo> threadInfos)
- *      void onStop(FileInfo fileInfo, List<ThreadInfo> threadInfos)
- *      void onComplete(FileInfo fileInfo, List<ThreadInfo> threadInfos)
+ * 3）下载事件接口DownloadListener（可选）
+ *      void onStateChanged(FileInfo fileInfo, List<ThreadInfo> threadInfos, DownloadState state);
+ *      void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes);
+ *      void onError(FileInfo fileInfo, List<ThreadInfo> threadInfos, Exception e);
  *
  * 4）下载启动方式
  * 4.1）方式一：按钮点击事件中运行DownloadTask.start()
@@ -99,8 +96,8 @@ public class DownloadTask {
      * 持有Activity的引用
      *
      * 注意：可能带来的内存泄漏问题！
-     * 当Activity退出后，而子线程仍继续运行，此时如果GC，因为子线程仍持有Activity的引用mContext，导致Activity无法被回收，就会发生内存泄漏！
-     * 通用解决方式：在子线程设置停止标志（并且声明为volatile），Activity退出时置位该标志使得子线程终止运行。
+     * 当Activity关闭后，而子线程仍继续运行，此时如果GC，因为子线程仍持有Activity的引用mContext，导致Activity无法被回收，就会发生内存泄漏！
+     * 通用解决方式：在子线程设置停止标志（并且声明为volatile），Activity关闭时置位该标志使得子线程终止运行。
      *
      * https://blog.csdn.net/changlei_shennan/article/details/44039905
      */
@@ -163,60 +160,17 @@ public class DownloadTask {
         mConfig.progressInterval = progressInterval;
         return this;
     }
-    private OnProgressListener mOnProgressListener;
-    public DownloadTask setOnProgressListener(OnProgressListener onProgressListener) {
-        mOnProgressListener = onProgressListener;
-        return this;
-    }
-    private DownloadEvent mDownloadEvent;
-    public DownloadTask setDownloadEvent(DownloadEvent downloadEvent) {
-        mDownloadEvent = downloadEvent;
-        return this;
-    }
     public DownloadTask setThreadCount(int threadCount) {
         mConfig.threadCount = threadCount;
         return this;
     }
+    private DownloadListener mDownloadListener;
+    public DownloadTask setDownloadListener(DownloadListener onProgressListener) {
+        mDownloadListener = onProgressListener;
+        return this;
+    }
     /* ------------ 链式配置 ----------- */
 
-
-    /**
-     * 初始化
-     *
-     * 注意：必须初始化，否则不能执行下载开始、暂停等操作！
-     */
-    public void init() {
-        if (DEBUG) Log.d(TAG, "DownloadTask# init()# ");
-
-        if (mFileInfo.getStatus() == FileInfo.FILE_STATUS_NEW) {
-            ///更新下载文件状态：下载初始化
-            mFileInfo.setStatus(FileInfo.FILE_STATUS_INIT);
-
-            ///创建Handler对象
-            ///注意：Handler对象不能在构造中创建！因为mDownloadEvent、mOnProgressListener参数尚未准备好
-            mHandler = new DownloadHandler (
-                    this,
-                    mFileInfo,
-                    mDownloadEvent,
-                    mOnProgressListener,
-                    mThreadDAO
-            );
-
-            ///启动初始化线程
-            InitThread initThread = new InitThread (
-                    mContext,
-                    this,
-                    mConfig,
-                    mFileInfo,
-                    mHandler,
-                    mThreadDAO
-            );
-
-            ///线程池
-//            initThread.start();
-            sExecutorService.execute(initThread);
-        }
-    }
 
     /**
      * 开始下载
@@ -229,26 +183,24 @@ public class DownloadTask {
             return;
         }
 
-        switch (mFileInfo.getStatus()) {
-            case FileInfo.FILE_STATUS_ERROR:
+        switch (mFileInfo.getState()) {
+            case FAILED:
 
                 break;
-            case FileInfo.FILE_STATUS_NEW:
-                ///发送消息：下载错误
-                mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
-                        new DownloadException(DownloadException.EXCEPTION_NO_INIT, "DownloadTask Init expected."))
-                        .sendToTarget();
-                return;
+            case NEW:
+                ///初始化过程
+                init();
 
-            case FileInfo.FILE_STATUS_INIT:
+                break;
+            case INITIALIZED:
                 ///执行下载过程
                 innerStart();
 
                 break;
-            case FileInfo.FILE_STATUS_START:
+            case STARTED:
 
                 break;
-            case FileInfo.FILE_STATUS_PAUSE:    ///下载暂停后重新开始下载
+            case PAUSED:    ///下载暂停后重新开始下载
 
                 ///[FIX BUG#pause后立即start所引起的重复启动问题]运行start()时会同时检测mTimer是否为null的条件
                 if (mTimer != null) {
@@ -259,10 +211,10 @@ public class DownloadTask {
                 innerStart();
 
                 break;
-            case FileInfo.FILE_STATUS_STOP:
+            case STOPPED:
 
                 break;
-            case FileInfo.FILE_STATUS_COMPLETE: ///下载完成后重新开始下载
+            case COMPLETED: ///下载完成后重新开始下载
 
                 ///[修正下载完成后重新开始下载]
                 ///重置已经下载完的总耗时（毫秒）、总下载字节数
@@ -270,7 +222,7 @@ public class DownloadTask {
                 mFileInfo.setFinishedBytes(0);
                 ///重置所有下载线程信息的下载字节数
                 for (ThreadInfo threadInfo : mThreadInfos) {
-                    threadInfo.setStatus(ThreadInfo.THREAD_STATUS_INIT);
+                    threadInfo.setState(DownloadState.INITIALIZED);
                     threadInfo.setFinishedBytes(0);
                 }
 
@@ -281,11 +233,38 @@ public class DownloadTask {
         }
     }
 
+    private void init() {
+        if (DEBUG) Log.d(TAG, "DownloadTask# init()# ");
+
+        ///创建Handler对象
+        ///注意：Handler对象不能在构造中创建！因为mDownloadEvent、mOnProgressListener参数尚未准备好
+        mHandler = new DownloadHandler (
+                this,
+                mFileInfo,
+                mDownloadListener,
+                mThreadDAO
+        );
+
+        ///启动初始化线程
+        InitThread initThread = new InitThread (
+                mContext,
+                this,
+                mConfig,
+                mFileInfo,
+                mHandler,
+                mThreadDAO
+        );
+
+        ///线程池
+//        initThread.start();
+        sExecutorService.execute(initThread);
+    }
+
     private void innerStart() {
         ///遍历下载线程信息集合，找出所有未完成的下载线程信息
         final ArrayList<ThreadInfo> notCompleteThreadInfos = new ArrayList<>();
         for (ThreadInfo threadInfo : mThreadInfos) {
-            if (threadInfo.getStatus() != ThreadInfo.THREAD_STATUS_COMPLETE) {
+            if (threadInfo.getState() != DownloadState.COMPLETED) {
                 notCompleteThreadInfos.add(threadInfo);
             }
         }
@@ -293,12 +272,12 @@ public class DownloadTask {
         ///如果下载线程全部完成
         if (notCompleteThreadInfos.isEmpty()) {
             ///更新下载文件状态：下载完成
-            if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# 更新下载文件状态：mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE)");
-            mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
+            if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# 更新下载文件状态：mFileInfo.setState(DownloadState.COMPLETED)");
+            mFileInfo.setState(DownloadState.COMPLETED);
 
             ///发送消息：下载完成
             if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# ------- 发送消息：下载完成 -------");
-            mHandler.obtainMessage(DownloadHandler.MSG_COMPLETE).sendToTarget();
+            mHandler.obtainMessage(DownloadHandler.MSG_COMPLETED).sendToTarget();
 
             return;
         }
@@ -306,39 +285,56 @@ public class DownloadTask {
         ///[FIX BUG: 暂停或完成后出现多次重复的消息通知！]
         ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
         ///https://www.cnblogs.com/dolphin0520/p/3920397.html
-        CyclicBarrier barrierPauseOrComplete  = new CyclicBarrier(notCompleteThreadInfos.size(), new Runnable() {
+        CyclicBarrier barrier = new CyclicBarrier(notCompleteThreadInfos.size(), new Runnable() {
             @Override
             public void run() {
                 ///遍历所有下载线程信息，如果存在未完成状态（即暂停状态），则说明下载文件信息状态是暂停状态，否则就应该是完成状态
-                boolean statusComplete = true;
+                DownloadState state = null;
                 for (ThreadInfo threadInfo : notCompleteThreadInfos) {
-                    if (threadInfo.getStatus() != ThreadInfo.THREAD_STATUS_COMPLETE) {
-                        statusComplete = false;
+                    if (threadInfo.getState() == DownloadState.STOPPED) {
+                        state = DownloadState.STOPPED;
                         break;
                     }
                 }
+                if (state == null) {
+                    for (ThreadInfo threadInfo : notCompleteThreadInfos) {
+                        if (threadInfo.getState() == DownloadState.STOPPED) {
+                            state = DownloadState.PAUSED;
+                            break;
+                        }
+                    }
+                }
+                if (state == null) {
+                    state = DownloadState.COMPLETED;
+                }
 
-                if (statusComplete) {
-                    ///更新下载文件状态：下载完成
-                    mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
+                if (state == DownloadState.STOPPED) {
+                    ///发送消息：下载停止
+                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# barrier: ------- 发送消息：下载停止 -------");
+                    mHandler.obtainMessage(DownloadHandler.MSG_STOPPED).sendToTarget();
 
-                    ///发送消息：下载完成
-                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete#  ------- 发送消息：下载完成 -------");
-                    mHandler.obtainMessage(DownloadHandler.MSG_COMPLETE).sendToTarget();
-                } else {
+                } else if (state == DownloadState.PAUSED) {
                     ///发送消息：下载暂停
-                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete:  ------- 发送消息：下载暂停 -------");
-                    mHandler.obtainMessage(DownloadHandler.MSG_PAUSE).sendToTarget();
+                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# barrier: ------- 发送消息：下载暂停 -------");
+                    mHandler.obtainMessage(DownloadHandler.MSG_PAUSED).sendToTarget();
 
                     ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
-                    synchronized (lock) {
-                        if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete: lock.notify() ............................");
-                        lock.notify();
+                    synchronized (LOCK) {
+                        if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# barrier: LOCK.notify() ............................");
+                        LOCK.notify();
                     }
+
+                } else {    ///DownloadState.COMPLETED
+                    ///更新下载文件状态：下载完成
+                    mFileInfo.setState(DownloadState.COMPLETED);
+
+                    ///发送消息：下载完成
+                    if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# barrier: ------- 发送消息：下载完成 -------");
+                    mHandler.obtainMessage(DownloadHandler.MSG_COMPLETED).sendToTarget();
                 }
 
                 ///[FIX BUG# 下载完成后取消定时器，进度更新显示99%]可以取消定时器Timer
-                if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# CyclicBarrier barrierPauseOrComplete: 可以取消定时器Timer");
+                if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# barrier: 可以取消定时器Timer");
                 mayStopTimer = true;
             }
         });
@@ -352,17 +348,17 @@ public class DownloadTask {
                     mHandler,
                     threadInfo,
                     mThreadDAO,
-                    barrierPauseOrComplete
+                    barrier
             );
             ///线程池
 //            downloadThread.start();
             sExecutorService.execute(downloadThread);
 
-            threadInfo.setStatus(ThreadInfo.THREAD_STATUS_START);
+            threadInfo.setState(DownloadState.STARTED);
         }
 
         ///更新下载文件状态：下载开始
-        mFileInfo.setStatus(FileInfo.FILE_STATUS_START);
+        mFileInfo.setState(DownloadState.STARTED);
 
         ///设置下载开始时间
         startTimeMillis = System.currentTimeMillis();
@@ -379,7 +375,7 @@ public class DownloadTask {
                 ///更新已经下载完的总耗时（毫秒）
                 mFileInfo.setFinishedTimeMillis(mFileInfo.getFinishedTimeMillis() + System.currentTimeMillis() - startTimeMillis);
 
-                if (mOnProgressListener != null) {
+                if (mDownloadListener != null) {
                     ///发送消息：更新下载进度
                     if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 发送消息：更新进度 -------");
                     long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
@@ -402,12 +398,15 @@ public class DownloadTask {
         ///发送消息：下载开始
         if (DEBUG) Log.d(TAG, "DownloadTask# innerStart()# ------- 发送消息：下载开始 -------");
         if (mHandler != null) {
-            mHandler.obtainMessage(DownloadHandler.MSG_START).sendToTarget();
+            mHandler.obtainMessage(DownloadHandler.MSG_STARTED).sendToTarget();
         }
     }
 
     ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
-    private final Object lock = new Object();
+    /**
+     * Lock to synchronize access.
+     */
+    private static final Object LOCK = new Object();
 
     /**
      * 暂停下载
@@ -415,26 +414,30 @@ public class DownloadTask {
     public void pause() {
         if (DEBUG) Log.d(TAG, "DownloadTask# pause()# ");
 
-        switch (mFileInfo.getStatus()) {
-            case FileInfo.FILE_STATUS_ERROR:
+        switch (mFileInfo.getState()) {
+            case FAILED:
 
                 break;
-            case FileInfo.FILE_STATUS_NEW:
+            case NEW:
                 ///发送消息：下载错误
-                mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
+                mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
                         new DownloadException(DownloadException.EXCEPTION_NO_INIT, "DownloadTask Init expected."))
                         .sendToTarget();
                 return;
 
-            case FileInfo.FILE_STATUS_INIT:
+            case INITIALIZED:
 
                 break;
-            case FileInfo.FILE_STATUS_START:
+            case STARTED:
+                ///更新下载文件状态：下载暂停
+                if (DEBUG) Log.d(TAG, "DownloadTask# pause()# 更新下载文件状态：mFileInfo.setState(DownloadState.PAUSED)");
+                mFileInfo.setState(DownloadState.PAUSED);
+
                 ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
-                synchronized (lock) {
+                synchronized (LOCK) {
                     try {
                         if (DEBUG) Log.d(TAG, "DownloadTask# pause()# wait ............................");
-                        lock.wait();
+                        LOCK.wait();
                         if (DEBUG) Log.d(TAG, "DownloadTask# pause()# notified ............................");
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -442,13 +445,13 @@ public class DownloadTask {
                 }
 
                 break;
-            case FileInfo.FILE_STATUS_PAUSE:
+            case PAUSED:
 
                 break;
-            case FileInfo.FILE_STATUS_STOP:
+            case STOPPED:
 
                 break;
-            case FileInfo.FILE_STATUS_COMPLETE:
+            case COMPLETED:
 
                 break;
         }
@@ -460,32 +463,32 @@ public class DownloadTask {
     public void stop() {
         if (DEBUG) Log.d(TAG, "DownloadTask# stop()# ");
 
-        switch (mFileInfo.getStatus()) {
-            case FileInfo.FILE_STATUS_ERROR:
+        switch (mFileInfo.getState()) {
+            case FAILED:
 
                 break;
-            case FileInfo.FILE_STATUS_NEW:
+            case NEW:
                 ///发送消息：下载错误
-                mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
+                mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
                         new DownloadException(DownloadException.EXCEPTION_NO_INIT, "DownloadTask Init expected."))
                         .sendToTarget();
                 return;
 
-            case FileInfo.FILE_STATUS_INIT:
+            case INITIALIZED:
 
                 break;
-            case FileInfo.FILE_STATUS_START:
+            case STARTED:
                 innerStop();
 
                 break;
-            case FileInfo.FILE_STATUS_PAUSE:
+            case PAUSED:
                 innerStop();
 
                 break;
-            case FileInfo.FILE_STATUS_STOP:
+            case STOPPED:
 
                 break;
-            case FileInfo.FILE_STATUS_COMPLETE:
+            case COMPLETED:
                 innerStop();
 
                 break;
@@ -494,16 +497,8 @@ public class DownloadTask {
 
     private void innerStop() {
         ///更新下载文件状态：下载停止
-        if (DEBUG) Log.d(TAG, "DownloadTask# innerStop()# 更新下载文件状态：mFileInfo.setStatus(FileInfo.FILE_STATUS_STOP)");
-        mFileInfo.setStatus(FileInfo.FILE_STATUS_STOP);
-
-        ///[FIX BUG# 下载完成后取消定时器，进度更新显示99%]可以取消定时器Timer
-        if (DEBUG) Log.d(TAG, "DownloadTask# innerStop()# 可以取消定时器Timer");
-        mayStopTimer = true;
-
-        ///发送消息：下载停止
-        if (DEBUG) Log.d(TAG, "DownloadTask# innerStop()# ------- 发送消息：下载停止 -------");
-        mHandler.obtainMessage(DownloadHandler.MSG_STOP).sendToTarget();
+        if (DEBUG) Log.d(TAG, "DownloadTask# innerStop()# 更新下载文件状态：mFileInfo.setState(DownloadState.STOPPED)");
+        mFileInfo.setState(DownloadState.STOPPED);
     }
 
 }

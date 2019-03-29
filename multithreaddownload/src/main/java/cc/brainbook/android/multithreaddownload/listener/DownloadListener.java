@@ -1,14 +1,27 @@
-package cc.brainbook.android.multithreaddownload.interfaces;
+package cc.brainbook.android.multithreaddownload.listener;
+
+///\com\amazonaws\mobileconnectors\s3\transferutility\DownloadListener.java
 
 import java.util.List;
 
+import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 
 /**
- * 下载进度监听器
+ * Listener interface for download state and progress changes.
+ * All callbacks will be invoked on the main thread.
  */
-public interface OnProgressListener {
+public interface DownloadListener {
+    /**
+     * 下载状态变化的事件
+     *
+     * @param fileInfo
+     * @param threadInfos
+     * @param state
+     */
+    void onStateChanged(FileInfo fileInfo, List<ThreadInfo> threadInfos, DownloadState state);
+
     /**
      * 下载进度的监听回调方法
      *
@@ -19,4 +32,12 @@ public interface OnProgressListener {
      */
     void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes);
 
+    /**
+     * 下载错误的事件
+     *
+     * @param fileInfo
+     * @param threadInfos
+     * @param e
+     */
+    void onError(FileInfo fileInfo, List<ThreadInfo> threadInfos, Exception e);
 }

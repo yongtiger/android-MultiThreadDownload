@@ -1,13 +1,15 @@
 package cc.brainbook.android.multithreaddownload.bean;
 
+import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
+
 public class FileInfo {
-    public static final int FILE_STATUS_ERROR = -1;
-    public static final int FILE_STATUS_NEW = 0;
-    public static final int FILE_STATUS_INIT = 1;
-    public static final int FILE_STATUS_START = 2;
-    public static final int FILE_STATUS_PAUSE = 3;
-    public static final int FILE_STATUS_STOP = 4;
-    public static final int FILE_STATUS_COMPLETE = 5;
+//    public static final int FILE_STATUS_ERROR = -1;
+//    public static final int FILE_STATUS_NEW = 0;
+//    public static final int FILE_STATUS_INIT = 1;
+//    public static final int FILE_STATUS_START = 2;
+//    public static final int FILE_STATUS_PAUSE = 3;
+//    public static final int FILE_STATUS_STOP = 4;
+//    public static final int FILE_STATUS_COMPLETE = 5;
 
     /**
      * 状态标志
@@ -17,7 +19,7 @@ public class FileInfo {
      * https://www.jianshu.com/p/31e5ab16935f
      * https://blog.csdn.net/changlei_shennan/article/details/44039905
      */
-    private volatile int status;
+    private volatile DownloadState state;
 
     /**
      * 已经下载完的总耗时（毫秒）
@@ -45,15 +47,15 @@ public class FileInfo {
     private String savePath;
 
     public FileInfo() {
-        this.status = FILE_STATUS_NEW;
+        state = DownloadState.NEW;
     }
 
-    public int getStatus() {
-        return status;
+    public DownloadState getState() {
+        return state;
     }
 
-    public void setStatus(int status) {
-        this.status = status;
+    public void setState(DownloadState state) {
+        this.state = state;
     }
 
     public long getFinishedTimeMillis() {
@@ -107,7 +109,7 @@ public class FileInfo {
     @Override
     public String toString() {
         return "FileInfo{" +
-                "status=" + status +
+                "state=" + state +
                 ", finishedTimeMillis=" + finishedTimeMillis +
                 ", finishedBytes=" + finishedBytes +
                 ", fileUrl='" + fileUrl + '\'' +

@@ -7,15 +7,14 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
 import cc.brainbook.android.multithreaddownload.DownloadTask;
+import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
 import cc.brainbook.android.multithreaddownload.db.ThreadDAO;
-import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 import cc.brainbook.android.multithreaddownload.handler.DownloadHandler;
 import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
 import cc.brainbook.android.multithreaddownload.util.Util;
@@ -31,7 +30,10 @@ public class DownloadThread extends Thread {
     private DownloadHandler mHandler;
     private ThreadInfo mThreadInfo;
     private ThreadDAO mThreadDAO;
-    private CyclicBarrier mBarrierPauseOrComplete;
+
+    ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
+    ///https://www.cnblogs.com/dolphin0520/p/3920397.html
+    private CyclicBarrier mBarrier;
 
     public DownloadThread(DownloadTask downloadTask,
                           Config config,
@@ -39,7 +41,7 @@ public class DownloadThread extends Thread {
                           DownloadHandler handler,
                           ThreadInfo threadInfo,
                           ThreadDAO threadDAO,
-                          CyclicBarrier barrierPauseOrComplete
+                          CyclicBarrier barrier
     ) {
         this.mDownloadTask = downloadTask;
         this.mConfig = config;
@@ -47,7 +49,7 @@ public class DownloadThread extends Thread {
         this.mHandler = handler;
         this.mThreadInfo = threadInfo;
         this.mThreadDAO = threadDAO;
-        this.mBarrierPauseOrComplete = barrierPauseOrComplete;
+        this.mBarrier = barrier;
     }
 
     @Override
@@ -113,43 +115,42 @@ public class DownloadThread extends Thread {
 
                 if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), " + mThreadInfo.getStart() + " - " + mThreadInfo.getEnd() + ", Finished: " +mThreadInfo.getFinishedBytes());
 
-                if (mFileInfo.getStatus() == FileInfo.FILE_STATUS_PAUSE) {  ///暂停下载线程
-                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: THREAD_STATUS_PAUSE");
-                    mThreadInfo.setStatus(ThreadInfo.THREAD_STATUS_PAUSE);
+                if (mFileInfo.getState() == DownloadState.PAUSED) {  ///暂停下载线程
+                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: --------- DownloadState.PAUSED --------- ");
+                    mThreadInfo.setState(DownloadState.PAUSED);
 
                     ///下载线程信息保存到数据库
                     if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
-                    mThreadDAO.updateThread(mThreadInfo.getId(), mThreadInfo.getFinishedBytes());
+                    mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.PAUSED, mThreadInfo.getFinishedBytes());
 
                     ///判断所有下载线程是否暂停，并做相应处理
-                    ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
-                    ///https://www.cnblogs.com/dolphin0520/p/3920397.html
-                    mBarrierPauseOrComplete.await();
+                    mBarrier.await();
 
                     return;
-                } else if (mFileInfo.getStatus() == FileInfo.FILE_STATUS_STOP) {   ///停止下载线程
-                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: FILE_STATUS_STOP");
-                    mThreadInfo.setStatus(ThreadInfo.THREAD_STATUS_STOP);
+                } else if (mFileInfo.getState() == DownloadState.STOPPED) {   ///停止下载线程
+                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: --------- DownloadState.STOPPED --------- ");
+                    mThreadInfo.setState(DownloadState.STOPPED);
+
+                    ///判断所有下载线程是否停止，并做相应处理
+                    mBarrier.await();
 
                     return;
                 }
             }
 
             ///更新线程状态：下载完成
-            mThreadInfo.setStatus(ThreadInfo.THREAD_STATUS_COMPLETE);
+            mThreadInfo.setState(DownloadState.COMPLETED);
 
             ///下载线程信息保存到数据库
             if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
-            mThreadDAO.updateThread(mThreadInfo.getId(), mThreadInfo.getFinishedBytes());
+            mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.PAUSED, mThreadInfo.getFinishedBytes());
 
             ///判断所有下载线程是否完成，并做相应处理
-            ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
-            ///https://www.cnblogs.com/dolphin0520/p/3920397.html
-            mBarrierPauseOrComplete.await();
+            mBarrier.await();
 
         } catch (Exception e) {
             ///发送消息：下载错误
-            mHandler.obtainMessage(DownloadHandler.MSG_ERROR, e).sendToTarget();
+            mHandler.obtainMessage(DownloadHandler.MSG_FAILED, e).sendToTarget();
         } finally {
             ///关闭连接
             if (connection != null) {

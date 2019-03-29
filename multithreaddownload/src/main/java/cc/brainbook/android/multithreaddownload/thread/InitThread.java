@@ -9,6 +9,7 @@ import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 
 import cc.brainbook.android.multithreaddownload.DownloadTask;
+import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
@@ -60,7 +61,7 @@ public class InitThread extends Thread {
         /* ----------- 检验文件网址URL、保存目录 ----------- */
         if (TextUtils.isEmpty(mFileInfo.getFileUrl())) {
             ///发送消息：下载错误
-            mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
+            mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
                     new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, "The file url cannot be null."))
                     .sendToTarget();
             return;
@@ -70,7 +71,7 @@ public class InitThread extends Thread {
         } else {
             if (!Util.mkdirs(mFileInfo.getSavePath())) {
                 ///发送消息：下载错误
-                mHandler.obtainMessage(DownloadHandler.MSG_ERROR,
+                mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
                         new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The file save path cannot be made: " + mFileInfo.getSavePath()))
                         .sendToTarget();
                 return;
@@ -118,7 +119,7 @@ public class InitThread extends Thread {
 
         } catch (Exception e) {
             ///发送消息：下载错误
-            mHandler.obtainMessage(DownloadHandler.MSG_ERROR, e).sendToTarget();
+            mHandler.obtainMessage(DownloadHandler.MSG_FAILED, e).sendToTarget();
             return;
         } finally {
             ///关闭连接
@@ -153,18 +154,20 @@ public class InitThread extends Thread {
             ///重置mFileInfo的下载完的总字节数
             setFileInfoFinishedBytes();
 
-            ///根据下载文件信息的完成字节总数，判断该下载文件信息的状态是完成（FILE_STATUS_COMPLETE）还是暂停（FILE_STATUS_PAUSE）
+            ///根据下载文件信息的完成字节总数，判断该下载文件信息的状态是完成（COMPLETE）还是暂停（PAUSE）
             if (mFileInfo.getFinishedBytes() == mFileInfo.getFileSize()) {
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_COMPLETE);
+                mFileInfo.setState(DownloadState.COMPLETED);
             } else {
-                mFileInfo.setStatus(FileInfo.FILE_STATUS_PAUSE);
+                mFileInfo.setState(DownloadState.PAUSED);
             }
         }
 
+        ///更新下载文件状态：下载初始化结束
+        if (DEBUG) Log.d(TAG, "InitThread# run()# 更新下载文件状态：mFileInfo.setState(DownloadState.INITIALIZED)");
+        mFileInfo.setState(DownloadState.INITIALIZED);
 
-        /* ----------- 发送消息：始化线程结束 ----------- */
-        if (DEBUG) Log.d(TAG, "InitThread# run()# ------- 发送消息：始化线程结束 -------");
-        mHandler.obtainMessage(DownloadHandler.MSG_INIT).sendToTarget();
+        if (DEBUG) Log.d(TAG, "InitThread# run()# ------- 发送消息：下载初始化结束 -------");
+        mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED).sendToTarget();
     }
 
     /**
@@ -180,7 +183,7 @@ public class InitThread extends Thread {
         for (int i = 0; i < threadCount; i++) {
             ///创建线程信息
             ThreadInfo threadInfo = new ThreadInfo (
-                    ThreadInfo.THREAD_STATUS_NEW,
+                    DownloadState.NEW,
                     0,
                     0,
                     i * length,
@@ -201,7 +204,7 @@ public class InitThread extends Thread {
             threadInfo.setId(threadId);
 
             ///设置线程信息的状态为THREAD_STATUS_INIT
-            threadInfo.setStatus(ThreadInfo.THREAD_STATUS_INIT);
+            threadInfo.setState(DownloadState.INITIALIZED);
 
             ///添加到线程信息集合中
             mDownloadTask.mThreadInfos.add(threadInfo);
@@ -213,14 +216,6 @@ public class InitThread extends Thread {
      */
     private void setFileInfoFinishedBytes() {
         for (ThreadInfo threadInfo : mDownloadTask.mThreadInfos) {
-            ///计算每个下载线程信息的状态
-            ///??????考虑在thread_info数据表中加入status字段保存，这样就不必每次都计算了
-            if (threadInfo.getEnd() - threadInfo.getStart() + 1 == threadInfo.getFinishedBytes()) {
-                threadInfo.setStatus(ThreadInfo.THREAD_STATUS_COMPLETE);
-            } else {
-                threadInfo.setStatus(ThreadInfo.THREAD_STATUS_PAUSE);
-            }
-
             ///重置mFileInfo的下载完的总字节数
             mFileInfo.setFinishedBytes(mFileInfo.getFinishedBytes() + threadInfo.getFinishedBytes());
         }

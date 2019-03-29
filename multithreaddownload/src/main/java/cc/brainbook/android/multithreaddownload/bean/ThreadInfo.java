@@ -1,17 +1,14 @@
 package cc.brainbook.android.multithreaddownload.bean;
 
-public class ThreadInfo {
-    public static final int THREAD_STATUS_NEW = 0;
-    public static final int THREAD_STATUS_INIT = 1;
-    public static final int THREAD_STATUS_START = 2;
-    public static final int THREAD_STATUS_PAUSE = 3;
-    public static final int THREAD_STATUS_STOP = 4;
-    public static final int THREAD_STATUS_COMPLETE = 5;
+import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 
+public class ThreadInfo {
     /**
      * 本线程的状态标志
+     *
+     * 注意：只用到其中的暂停和完成两个状态
      */
-    private int status;
+    private DownloadState state;
 
     /**
      * 本线程已经下载的字节数
@@ -30,7 +27,7 @@ public class ThreadInfo {
 
     public ThreadInfo() {}
 
-    public ThreadInfo(int status,
+    public ThreadInfo(DownloadState state,
                       long finishedBytes,
                       long id,
                       long start,
@@ -40,7 +37,7 @@ public class ThreadInfo {
                       long fileSize,
                       String savePath
     ) {
-        this.status = status;
+        this.state = state;
         this.finishedBytes = finishedBytes;
         this.id = id;
         this.start = start;
@@ -51,12 +48,12 @@ public class ThreadInfo {
         this.savePath = savePath;
     }
 
-    public int getStatus() {
-        return status;
+    public DownloadState getState() {
+        return state;
     }
 
-    public void setStatus(int status) {
-        this.status = status;
+    public void setState(DownloadState state) {
+        this.state = state;
     }
 
     public long getFinishedBytes() {
@@ -121,5 +118,20 @@ public class ThreadInfo {
 
     public void setSavePath(String savePath) {
         this.savePath = savePath;
+    }
+
+    @Override
+    public String toString() {
+        return "ThreadInfo{" +
+                "state=" + state +
+                ", finishedBytes=" + finishedBytes +
+                ", id=" + id +
+                ", start=" + start +
+                ", end=" + end +
+                ", fileUrl='" + fileUrl + '\'' +
+                ", fileName='" + fileName + '\'' +
+                ", fileSize=" + fileSize +
+                ", savePath='" + savePath + '\'' +
+                '}';
     }
 }

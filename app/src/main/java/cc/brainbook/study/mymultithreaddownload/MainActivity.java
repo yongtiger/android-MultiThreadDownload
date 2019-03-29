@@ -12,17 +12,16 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.File;
 import java.util.List;
 
 import cc.brainbook.android.multithreaddownload.DownloadTask;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
+import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.exception.DownloadException;
-import cc.brainbook.android.multithreaddownload.interfaces.DownloadEvent;
-import cc.brainbook.android.multithreaddownload.interfaces.OnProgressListener;
+import cc.brainbook.android.multithreaddownload.listener.DownloadListener;
 
-public class MainActivity extends AppCompatActivity implements DownloadEvent {
+public class MainActivity extends AppCompatActivity {
     private static final String TAG = "TAG";
 
     /**
@@ -36,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
     public TextView mTextView;
 
     private DownloadTask mDownloadTask;
+    private MyDownloadListener mDownloadListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,13 +95,15 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
         pauseDownload(mDownloadTask);
 
         ///避免内存泄漏
-        mDownloadTask.setDownloadEvent(null);
-        mDownloadTask.setOnProgressListener(null);
+        mDownloadTask.setDownloadListener(null);
 
         super.onDestroy();
     }
 
     public void init() {
+        ///实例化下载监听器对象
+        mDownloadListener = new MyDownloadListener();
+
         ///创建下载任务类DownloadTask实例，并链式配置参数
         ///实例化DownloadTask时传入Context引用，方便操作（但要留意引起内存泄漏！）
         mDownloadTask = new DownloadTask(getApplicationContext())
@@ -109,28 +111,8 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
 //                .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
                 .setThreadCount(3)
-                .setOnProgressListener(new OnProgressListener() {   ///设置进度监听（可选）
-                    @Override
-                    public void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes) {
-                        Log.d(TAG, "MainActivity# onProgress()# fileInfo: " + fileInfo);
-                        for (ThreadInfo threadInfo : threadInfos) {
-                            Log.d(TAG, "MainActivity# onProgress()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-                            Log.d(TAG, "MainActivity# onProgress()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
-                        }
-                        Log.d(TAG, "MainActivity# onProgress()# diffTimeMillis: " + diffTimeMillis);
-                        Log.d(TAG, "MainActivity# onProgress()# diffFinishedBytes: " + diffFinishedBytes);
-                        ///避免除0异常
-                        int progress = fileInfo.getFinishedBytes() == 0 ? 0 : (int) (fileInfo.getFinishedBytes() * 100 / fileInfo.getFileSize());
-                        long speed = diffFinishedBytes == 0 ? 0 : diffFinishedBytes / diffTimeMillis;
-                        Log.d(TAG, "MainActivity# onProgress()# progress, speed: " + progress + ", " + speed);
+                .setDownloadListener(mDownloadListener);
 
-                        mTextView.setText(progress + ", " + speed);
-                    }
-                })
-                .setDownloadEvent(this);
-
-        ///必须初始化，否则不能执行下载开始、暂停等操作！
-        mDownloadTask.init();
     }
 
     public void startDownload(View view) {
@@ -165,115 +147,124 @@ public class MainActivity extends AppCompatActivity implements DownloadEvent {
         }
     }
 
+    private class MyDownloadListener implements DownloadListener {
+        @Override
+        public void onStateChanged(FileInfo fileInfo, List<ThreadInfo> threadInfos, DownloadState state) {
+            switch (state) {
+                case NEW:
+                    break;
+                case INITIALIZED:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- INITIALIZED ----------");
 
-    /* ----------- [实现下载事件接口DownloadEvent] ----------- */
-    @Override
-    public void onInit(FileInfo fileInfo, List<ThreadInfo> threadInfos) {
-        Log.d(TAG, "MainActivity# onInit()# fileInfo: " + fileInfo);
+//                    ///（可选）下载启动方式二：初始化完成的事件接口中运行DownloadTask.start()
+//                    ///优点：代码执行连续。可放在一个方法或代码块中（以后方便移植到RxJava）
+//                    mDownloadTask.start();
 
-        for (ThreadInfo threadInfo : threadInfos) {
-            Log.d(TAG, "MainActivity# onInit()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-            Log.d(TAG, "MainActivity# onInit()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
+                    break;
+                case STARTED:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- STARTED ----------");
+
+                    break;
+                case PAUSED:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- PAUSED ----------");
+
+                    break;
+                case COMPLETED:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- COMPLETED ----------");
+
+                    ///下载文件URL
+                    String fileUrl = fileInfo.getFileUrl();
+                    ///下载文件名
+                    String fileName = fileInfo.getFileName();
+                    ///下载文件大小
+                    long fileSize = fileInfo.getFileSize();
+                    ///下载文件保存路径
+                    String savePath = fileInfo.getSavePath();
+                    ///已经下载完的总耗时（毫秒）
+                    long finishedTimeMillis = fileInfo.getFinishedTimeMillis();
+                    ///已经下载完的总字节数
+                    long finishedBytes = fileInfo.getFinishedBytes();
+
+                    break;
+                case STOPPED:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- STOPPED ----------");
+
+                    break;
+                case FAILED:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- FAILED ----------");
+
+                    break;
+                case WAITING_FOR_NETWORK:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- WAITING_FOR_NETWORK ----------");
+
+                    break;
+                case UNKNOWN:
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- UNKNOWN ----------");
+
+                    break;
+            }
+
+            Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# fileInfo: " + fileInfo);
+            for (ThreadInfo threadInfo : threadInfos) {
+                Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# threadInfos: "
+                        + threadInfo.getId() + ", " + threadInfo.getState() + ", " + threadInfo.getFinishedBytes());
+            }
+            Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ------------------------------");
         }
 
-        ///（可选）下载启动方式二：初始化完成的事件接口中运行DownloadTask.start()
-        ///优点：代码执行连续。可放在一个方法或代码块中（以后方便移植到RxJava）
-//        mDownloadTask.start();
-    }
+        @Override
+        public void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes) {
+            Log.d(TAG, "MainActivity# onProgress()# fileInfo: " + fileInfo);
+//            for (ThreadInfo threadInfo : threadInfos) {
+//                Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# threadInfos: "
+//                        + threadInfo.getId() + ", " + threadInfo.getState() + ", " + threadInfo.getFinishedBytes());
+//            }
+            Log.d(TAG, "MainActivity# onProgress()# diffTimeMillis: " + diffTimeMillis);
+            Log.d(TAG, "MainActivity# onProgress()# diffFinishedBytes: " + diffFinishedBytes);
 
-    @Override
-    public void onStart(FileInfo fileInfo, List<ThreadInfo> threadInfos) {
-        Log.d(TAG, "MainActivity# onStart()# fileInfo: " + fileInfo);
+            ///避免除0异常
+            int progress = fileInfo.getFinishedBytes() == 0 ? 0 : (int) (fileInfo.getFinishedBytes() * 100 / fileInfo.getFileSize());
+            long speed = diffFinishedBytes == 0 ? 0 : diffFinishedBytes / diffTimeMillis;
+            Log.d(TAG, "MainActivity# onProgress()# progress, speed: " + progress + ", " + speed);
 
-        for (ThreadInfo threadInfo : threadInfos) {
-            Log.d(TAG, "MainActivity# onStart()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-            Log.d(TAG, "MainActivity# onStart()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
-        }
-    }
-
-    @Override
-    public void onPause(FileInfo fileInfo, List<ThreadInfo> threadInfos) {
-        Log.d(TAG, "MainActivity# onPause()# fileInfo: " + fileInfo);
-
-        for (ThreadInfo threadInfo : threadInfos) {
-            Log.d(TAG, "MainActivity# onPause()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-            Log.d(TAG, "MainActivity# onPause()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
-        }
-    }
-
-    @Override
-    public void onStop(FileInfo fileInfo, List<ThreadInfo> threadInfos) {
-        Log.d(TAG, "MainActivity# onStop()# fileInfo: " + fileInfo);
-
-        for (ThreadInfo threadInfo : threadInfos) {
-            Log.d(TAG, "MainActivity# onStop()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-            Log.d(TAG, "MainActivity# onStop()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
+            mTextView.setText(progress + ", " + speed);
         }
 
-        ///删除下载文件
-        Log.d(TAG, "MainActivity# onStop()# fileInfo: 删除下载文件");
-        new File(fileInfo.getSavePath() + fileInfo.getFileName()).delete();
-    }
-
-    @Override
-    public void onComplete(FileInfo fileInfo, List<ThreadInfo> threadInfos) {
-        Log.d(TAG, "MainActivity# onComplete()# fileInfo: " + fileInfo);
-
-        for (ThreadInfo threadInfo : threadInfos) {
-            Log.d(TAG, "MainActivity# onComplete()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getStatus());
-            Log.d(TAG, "MainActivity# onComplete()# threadInfos(" + threadInfo.getId() +"): " + threadInfo.getFinishedBytes());
-        }
-
-        ///下载文件URL
-        String fileUrl = fileInfo.getFileUrl();
-        ///下载文件名
-        String fileName = fileInfo.getFileName();
-        ///下载文件大小
-        long fileSize = fileInfo.getFileSize();
-        ///下载文件保存路径
-        String savePath = fileInfo.getSavePath();
-        ///已经下载完的总耗时（毫秒）
-        long finishedTimeMillis = fileInfo.getFinishedTimeMillis();
-        ///已经下载完的总字节数
-        long finishedBytes = fileInfo.getFinishedBytes();
-    }
-
-    @Override
-    public void onError(FileInfo fileInfo, List<ThreadInfo> threadInfos, Exception e) {
-        e.printStackTrace();
-        if (e.getCause() == null) {
-            Log.d(TAG, "MainActivity# onError()# Message: " + e.getMessage());
-            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
-        } else {
-            Log.d(TAG, "MainActivity# onError()# Message: " + e.getMessage() + "\n" + e.getCause().getMessage());
-            Toast.makeText(this, e.getMessage() + "\n" + e.getCause().getMessage(), Toast.LENGTH_LONG).show();
-        }
-
-        if (e instanceof DownloadException) {
-            DownloadException downloadException = (DownloadException) e;
-
-            if (DownloadException.EXCEPTION_FILE_URL_NULL == downloadException.getCode()) {
-
-            } else if (DownloadException.EXCEPTION_SAVE_PATH_MKDIR == downloadException.getCode()) {
-
-            } else if (DownloadException.EXCEPTION_NETWORK_MALFORMED_URL == downloadException.getCode()) {
-                ///当URL为null或无效网络连接协议时：java.net.MalformedURLException: Protocol not found
-
-            } else if (DownloadException.EXCEPTION_NETWORK_UNKNOWN_HOST == downloadException.getCode()) {
-                ///URL虽然以http://或https://开头、但host为空或无效host
-                ///     java.net.UnknownHostException: http://
-                ///     java.net.UnknownHostException: Unable to resolve host "aaa": No address associated with hostname
-
-            } else if (DownloadException.EXCEPTION_NETWORK_IO_EXCEPTION == downloadException.getCode()) {
-                ///如果没有网络连接
-
-                ///开启Wifi网络设置页面
-//                startWifiSettingsActivity();
+        @Override
+        public void onError(FileInfo fileInfo, List<ThreadInfo> threadInfos, Exception e) {
+            e.printStackTrace();
+            if (e.getCause() == null) {
+                Log.d(TAG, "MainActivity# onError()# Message: " + e.getMessage());
+                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
             } else {
+                Log.d(TAG, "MainActivity# onError()# Message: " + e.getMessage() + "\n" + e.getCause().getMessage());
+                Toast.makeText(getApplicationContext(), e.getMessage() + "\n" + e.getCause().getMessage(), Toast.LENGTH_LONG).show();
+            }
 
+            if (e instanceof DownloadException) {
+                DownloadException downloadException = (DownloadException) e;
+
+                if (DownloadException.EXCEPTION_FILE_URL_NULL == downloadException.getCode()) {
+
+                } else if (DownloadException.EXCEPTION_SAVE_PATH_MKDIR == downloadException.getCode()) {
+
+                } else if (DownloadException.EXCEPTION_NETWORK_MALFORMED_URL == downloadException.getCode()) {
+                    ///当URL为null或无效网络连接协议时：java.net.MalformedURLException: Protocol not found
+
+                } else if (DownloadException.EXCEPTION_NETWORK_UNKNOWN_HOST == downloadException.getCode()) {
+                    ///URL虽然以http://或https://开头、但host为空或无效host
+                    ///     java.net.UnknownHostException: http://
+                    ///     java.net.UnknownHostException: Unable to resolve host "aaa": No address associated with hostname
+
+                } else if (DownloadException.EXCEPTION_NETWORK_IO_EXCEPTION == downloadException.getCode()) {
+                    ///如果没有网络连接
+
+                    ///开启Wifi网络设置页面
+//                startWifiSettingsActivity();
+                } else {
+
+                }
             }
         }
-
     }
-
 }
