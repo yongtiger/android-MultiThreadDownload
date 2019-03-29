@@ -52,8 +52,8 @@ public class InitThread extends Thread {
         super.run();
 
 
-        /* ----------- 重置mFileInfo的已经下载完的总耗时（毫秒） ----------- */
-        ///注意：只计算本次下载初始化之后的总耗时，如果数据库已存线程信息，也重新计算，不累计（[//////??????以后改进]）
+        /* ----------- 重置文件信息的已经下载完成的总耗时（毫秒） ----------- */
+        ///注意：只计算本次初始化之后的总耗时，如果数据库已存线程信息，也重新计算，不累计（[//////??????以后改进]）
         if (DEBUG) Log.d(TAG, "InitThread# run()# 重置mFileInfo的FinishedTimeMillis为0");
         mFileInfo.setFinishedTimeMillis(0);
 
@@ -70,7 +70,7 @@ public class InitThread extends Thread {
             mFileInfo.setSavePath(Util.getDefaultFilesDirPath(mContext));
         } else {
             if (!Util.mkdirs(mFileInfo.getSavePath())) {
-                ///发送消息：下载错误
+                ///发送消息：下载失败
                 mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
                         new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The file save path cannot be made: " + mFileInfo.getSavePath()))
                         .sendToTarget();
@@ -132,8 +132,8 @@ public class InitThread extends Thread {
         }
 
 
-        /* ----------- 获得下载文件的所有线程信息集合 ----------- */
-        ///从数据库获得下载文件的所有线程信息集合
+        /* ----------- 获得线程信息集合 ----------- */
+        ///从数据库获得所有线程信息
         mDownloadTask.mThreadInfos = mThreadDAO.getAllThreads(
                 mFileInfo.getFileUrl(),
                 mFileInfo.getFileName(),
@@ -144,34 +144,35 @@ public class InitThread extends Thread {
         if (mDownloadTask.mThreadInfos.size() == 0) { ///如果数据库中没有
             if (DEBUG) Log.d(TAG, "InitThread# run()# threadInfos.size() == 0");
 
-            ///重置mFileInfo的下载完的总字节数
+            ///重置文件信息的下载完的总字节数
             if (DEBUG) Log.d(TAG, "InitThread# run()# 重置mFileInfo的FinishedBytes为0");
             mFileInfo.setFinishedBytes(0);
 
-            ///根据线程数量创建下载线程，并添加到下载信息集合中
+            ///根据线程数量创建线程信息，并添加到线程信息集合中
             createToThreadInfos(mConfig.threadCount);
-        } else {
-            ///重置mFileInfo的下载完的总字节数
+        } else {    ///如果数据库中有
+            ///重置文件信息的下载完成的总字节数
             setFileInfoFinishedBytes();
 
-            ///根据下载文件信息的完成字节总数，判断该下载文件信息的状态是完成（COMPLETE）还是暂停（PAUSE）
+            ///根据文件信息的完成字节总数，判断该文件信息的状态是成功还是暂停
+            ///其它未成功状态如停止/失败，都视为暂停，以便重新下载
             if (mFileInfo.getFinishedBytes() == mFileInfo.getFileSize()) {
-                mFileInfo.setState(DownloadState.COMPLETED);
+                mFileInfo.setState(DownloadState.SUCCEED);
             } else {
                 mFileInfo.setState(DownloadState.PAUSED);
             }
         }
 
-        ///更新下载文件状态：下载初始化结束
-        if (DEBUG) Log.d(TAG, "InitThread# run()# 更新下载文件状态：mFileInfo.setState(DownloadState.INITIALIZED)");
+        ///更新文件信息的状态：初始化结束
+        if (DEBUG) Log.d(TAG, "InitThread# run()# 更新文件信息的状态：mFileInfo.setState(DownloadState.INITIALIZED)");
         mFileInfo.setState(DownloadState.INITIALIZED);
 
-        if (DEBUG) Log.d(TAG, "InitThread# run()# ------- 发送消息：下载初始化结束 -------");
+        if (DEBUG) Log.d(TAG, "InitThread# run()# ------- 发送消息：初始化结束 -------");
         mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED).sendToTarget();
     }
 
     /**
-     * 根据线程数量创建下载线程，并添加到下载信息集合中
+     * 根据线程数量创建线程信息，并添加到线程信息集合中
      *
      * @param threadCount
      */
@@ -203,7 +204,7 @@ public class InitThread extends Thread {
             long threadId = mThreadDAO.insertThread(threadInfo);
             threadInfo.setId(threadId);
 
-            ///设置线程信息的状态为THREAD_STATUS_INIT
+            ///设置线程信息的状态为初始化
             threadInfo.setState(DownloadState.INITIALIZED);
 
             ///添加到线程信息集合中
@@ -212,11 +213,10 @@ public class InitThread extends Thread {
     }
 
     /**
-     * 重置mFileInfo的下载完的总字节数
+     * 重置下载文件的下载完的总字节数
      */
     private void setFileInfoFinishedBytes() {
         for (ThreadInfo threadInfo : mDownloadTask.mThreadInfos) {
-            ///重置mFileInfo的下载完的总字节数
             mFileInfo.setFinishedBytes(mFileInfo.getFinishedBytes() + threadInfo.getFinishedBytes());
         }
     }

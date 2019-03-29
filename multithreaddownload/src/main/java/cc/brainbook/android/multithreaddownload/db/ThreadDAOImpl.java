@@ -25,7 +25,7 @@ public class ThreadDAOImpl implements ThreadDAO {
         ///https://developer.android.com/training/data-storage/sqlite#WriteDbRow
         ///Create a new map of values, where column names are the keys
         ContentValues values = new ContentValues();
-        values.put("status", threadInfo.getState().toString());
+        values.put("state", threadInfo.getState().toString());
         values.put("finished", threadInfo.getFinishedBytes());
         values.put("start", threadInfo.getStart());
         values.put("end", threadInfo.getEnd());
@@ -48,7 +48,7 @@ public class ThreadDAOImpl implements ThreadDAO {
         ///https://developer.android.com/training/data-storage/sqlite#UpdateDbRow
         ///New value for one column
         ContentValues values = new ContentValues();
-        values.put("status", state.toString());
+        values.put("state", state.toString());
         values.put("finished", finished);
 
         ///Which row to update, based on the title

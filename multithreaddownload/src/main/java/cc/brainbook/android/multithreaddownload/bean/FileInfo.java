@@ -2,15 +2,10 @@ package cc.brainbook.android.multithreaddownload.bean;
 
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 
+/**
+ * 文件信息
+ */
 public class FileInfo {
-//    public static final int FILE_STATUS_ERROR = -1;
-//    public static final int FILE_STATUS_NEW = 0;
-//    public static final int FILE_STATUS_INIT = 1;
-//    public static final int FILE_STATUS_START = 2;
-//    public static final int FILE_STATUS_PAUSE = 3;
-//    public static final int FILE_STATUS_STOP = 4;
-//    public static final int FILE_STATUS_COMPLETE = 5;
-
     /**
      * 状态标志
      *
@@ -22,14 +17,14 @@ public class FileInfo {
     private volatile DownloadState state;
 
     /**
-     * 已经下载完的总耗时（毫秒）
+     * 已经完成的总耗时（毫秒）
      *
-     * 注意：考虑到断点续传，在停止状态不计算在内
+     * 注意：考虑到断点续传，在停止状态不计算在内！
      */
     private long finishedTimeMillis;
 
     /**
-     * 已经下载完的总字节数
+     * 已经完成的总字节数
      *
      * 注意：考虑到多线程访问，必须声明为volatile（是一种轻量级的synchronized）
      *

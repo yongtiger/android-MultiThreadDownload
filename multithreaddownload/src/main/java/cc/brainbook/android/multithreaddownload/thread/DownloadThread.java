@@ -56,6 +56,9 @@ public class DownloadThread extends Thread {
     public void run() {
         super.run();
 
+        ///更新线程信息的状态：下载开始
+        mThreadInfo.setState(DownloadState.STARTED);
+
         HttpURLConnection connection = null;
         BufferedInputStream bufferedInputStream = null;
         RandomAccessFile randomAccessFile = null;
@@ -70,8 +73,8 @@ public class DownloadThread extends Thread {
             ///设置连接的下载范围
             connection.setRequestProperty("range", "bytes="+ start + "-" + end);
 
-            ///发起网络连接
-            HttpDownloadUtil.connect(connection);
+//            ///发起网络连接
+//            HttpDownloadUtil.connect(connection);
 
             ///如果网络连接connection的响应码为206，则开始下载过程，否则抛出异常
             HttpDownloadUtil.handleResponseCode(connection, HttpURLConnection.HTTP_PARTIAL);
@@ -116,36 +119,42 @@ public class DownloadThread extends Thread {
                 if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), " + mThreadInfo.getStart() + " - " + mThreadInfo.getEnd() + ", Finished: " +mThreadInfo.getFinishedBytes());
 
                 if (mFileInfo.getState() == DownloadState.PAUSED) {  ///暂停下载线程
+                    ///更新线程信息的状态：下载暂停
                     if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: --------- DownloadState.PAUSED --------- ");
                     mThreadInfo.setState(DownloadState.PAUSED);
 
-                    ///下载线程信息保存到数据库
+                    ///线程信息保存到数据库
                     if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
                     mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.PAUSED, mThreadInfo.getFinishedBytes());
 
-                    ///判断所有下载线程是否暂停，并做相应处理
+                    ///等待所有线程暂停后再做相应处理
                     mBarrier.await();
 
                     return;
                 } else if (mFileInfo.getState() == DownloadState.STOPPED) {   ///停止下载线程
+                    ///更新线程信息的状态：下载停止
                     if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: --------- DownloadState.STOPPED --------- ");
                     mThreadInfo.setState(DownloadState.STOPPED);
 
-                    ///判断所有下载线程是否停止，并做相应处理
+                    ///线程信息保存到数据库
+                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
+                    mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.STOPPED, mThreadInfo.getFinishedBytes());
+
+                    ///等待所有线程停止后再做相应处理
                     mBarrier.await();
 
                     return;
                 }
             }
 
-            ///更新线程状态：下载完成
-            mThreadInfo.setState(DownloadState.COMPLETED);
+            ///更新线程信息的状态：下载完成
+            mThreadInfo.setState(DownloadState.SUCCEED);
 
-            ///下载线程信息保存到数据库
+            ///线程信息保存到数据库
             if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
-            mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.PAUSED, mThreadInfo.getFinishedBytes());
+            mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.SUCCEED, mThreadInfo.getFinishedBytes());
 
-            ///判断所有下载线程是否完成，并做相应处理
+            ///等待所有线程完成后再做相应处理
             mBarrier.await();
 
         } catch (Exception e) {

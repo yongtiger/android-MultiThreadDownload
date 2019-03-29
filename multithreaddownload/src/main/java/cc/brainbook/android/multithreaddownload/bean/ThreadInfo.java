@@ -2,16 +2,18 @@ package cc.brainbook.android.multithreaddownload.bean;
 
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 
+/**
+ * 线程信息
+ */
 public class ThreadInfo {
     /**
-     * 本线程的状态标志
+     * 状态标志
      *
-     * 注意：只用到其中的暂停和完成两个状态
      */
     private DownloadState state;
 
     /**
-     * 本线程已经下载的字节数
+     * 已经完成的字节数
      */
     private long finishedBytes;
 

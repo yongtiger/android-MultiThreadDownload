@@ -1,8 +1,6 @@
 package cc.brainbook.android.multithreaddownload.config;
 
 public class Config {
-    private static final int SIXTEEN_KB = 1024 * 16;
-
     /** Kilobytes */
     public static final int KB = 1024;
 
@@ -12,14 +10,16 @@ public class Config {
     /** Gigabytes */
     public static final long GB = 1024 * MB;
 
-    /** The maximum allowed parts in a multipart upload. */
-    public static final int MAXIMUM_UPLOAD_PARTS = 100;
+    private static final int SIXTEEN_KB = 16 * KB;
+
+    /** The maximum allowed parts in a multipart download. */
+    public static final int MAXIMUM_DOWNLOAD_PARTS = 100;
 
     /**
-     * Default minimum part size for upload parts. Anything below this will use
-     * a single upload
+     * Default minimum part size for download parts. Anything below this will use
+     * a single download
      */
-    public static final int MINIMUM_UPLOAD_PART_SIZE = 5 * MB;
+    public static final int MINIMUM_DOWNLOAD_PART_SIZE = 5 * MB;
 
     /** Default encoding used for text data */
     public static final String DEFAULT_ENCODING = "UTF-8";

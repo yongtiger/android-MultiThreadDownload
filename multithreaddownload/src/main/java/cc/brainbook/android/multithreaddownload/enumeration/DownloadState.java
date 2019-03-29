@@ -8,9 +8,10 @@ import java.util.Map;
  * The current state of a transfer.
  *
  * A transfer is initially in NEW state when added.
+ * It will turn into INITIALIZED when finished initialization.
  * It will turn into STARTED once it starts.
  * Customers can pause or cancel the transfer when needed and turns it into PAUSED or STOPPED state respectively.
- * Finally the transfer will either succeed as COMPLETED or fail as FAILED.
+ * Finally the transfer will either complete as SUCCEED or fail as FAILED.
  * WAITING_FOR_NETWORK state may kick in for an active transfer when network is lost.
  * The other enum values are internal use only.
  */
@@ -22,14 +23,12 @@ public enum DownloadState {
     NEW,
 
     /**
-     * This state represents a transfer that has been queued, but has not yet
-     * initialized
+     * This state represents a transfer that has been initialized, but has not yet started
      */
     INITIALIZED,
 
     /**
-     * This state represents a transfer that is currently uploading or
-     * downloading data
+     * This state represents a transfer that is currently downloading data
      */
     STARTED,
 
@@ -39,19 +38,19 @@ public enum DownloadState {
     PAUSED,
 
     /**
-     * This state represents a transfer that is completed
+     * This state represents a transfer that is succeed (completed)
      */
-    COMPLETED,
+    SUCCEED,
 
     /**
-     * This state represents a transfer that is stopped (canceled)
-     */
-    STOPPED,
-
-    /**
-     * This state represents a transfer that has failed
+     * This state represents a transfer that has failed (completed)
      */
     FAILED,
+
+    /**
+     * This state represents a transfer that is stopped (completed)
+     */
+    STOPPED,
 
     /**
      * This state represents a transfer that is currently on hold, waiting for

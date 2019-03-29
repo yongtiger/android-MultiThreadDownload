@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         ///创建下载任务类DownloadTask实例，并链式配置参数
         ///实例化DownloadTask时传入Context引用，方便操作（但要留意引起内存泄漏！）
         mDownloadTask = new DownloadTask(getApplicationContext())
-                .setFileUrl("http://a")
+                .setFileUrl("http://ljdy.tv/test/ljdy.apk")
 //                .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
                 .setThreadCount(3)
@@ -128,9 +128,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startDownload(DownloadTask downloadTask) {
-        ///（可选）下载启动方式一：按钮点击事件中运行DownloadTask.start()
-        ///优点：无需实现回调事件接口，代码简单
-        ///缺点：代码执行不连续，比如DownloadTask的new()和init()在onCreate()，而start()在按钮中
         if (downloadTask != null) {
             downloadTask.start();
         }
@@ -150,28 +147,22 @@ public class MainActivity extends AppCompatActivity {
     private class MyDownloadListener implements DownloadListener {
         @Override
         public void onStateChanged(FileInfo fileInfo, List<ThreadInfo> threadInfos, DownloadState state) {
+            Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- " + state + " ----------");
+
             switch (state) {
                 case NEW:
+
                     break;
                 case INITIALIZED:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- INITIALIZED ----------");
-
-//                    ///（可选）下载启动方式二：初始化完成的事件接口中运行DownloadTask.start()
-//                    ///优点：代码执行连续。可放在一个方法或代码块中（以后方便移植到RxJava）
-//                    mDownloadTask.start();
 
                     break;
                 case STARTED:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- STARTED ----------");
 
                     break;
                 case PAUSED:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- PAUSED ----------");
 
                     break;
-                case COMPLETED:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- COMPLETED ----------");
-
+                case SUCCEED:
                     ///下载文件URL
                     String fileUrl = fileInfo.getFileUrl();
                     ///下载文件名
@@ -187,19 +178,15 @@ public class MainActivity extends AppCompatActivity {
 
                     break;
                 case STOPPED:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- STOPPED ----------");
 
                     break;
                 case FAILED:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- FAILED ----------");
 
                     break;
                 case WAITING_FOR_NETWORK:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- WAITING_FOR_NETWORK ----------");
 
                     break;
                 case UNKNOWN:
-                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- UNKNOWN ----------");
 
                     break;
             }
