@@ -118,7 +118,7 @@ public class DownloadThread extends Thread {
                             DownloadState.PAUSED,
                             mThreadInfo.getFinishedBytes(),
                             mFileInfo.getFinishedTimeMillis(),
-                            mFileInfo.getUpdatedTimeMillis());
+                            System.currentTimeMillis());
 
                     ///等待所有线程暂停后再做相应处理
                     mBarrier.await();
@@ -133,7 +133,7 @@ public class DownloadThread extends Thread {
                             DownloadState.STOPPED,
                             mThreadInfo.getFinishedBytes(),
                             mFileInfo.getFinishedTimeMillis(),
-                            mFileInfo.getUpdatedTimeMillis());
+                            System.currentTimeMillis());
 
                     ///等待所有线程停止后再做相应处理
                     mBarrier.await();
@@ -150,7 +150,7 @@ public class DownloadThread extends Thread {
                     DownloadState.SUCCEED,
                     mThreadInfo.getFinishedBytes(),
                     mFileInfo.getFinishedTimeMillis(),
-                    mFileInfo.getUpdatedTimeMillis());
+                    System.currentTimeMillis());
 
             ///等待所有线程完成后再做相应处理
             mBarrier.await();

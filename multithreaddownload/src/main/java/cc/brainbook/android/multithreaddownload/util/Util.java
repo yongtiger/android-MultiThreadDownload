@@ -32,6 +32,9 @@ public class Util {
     /**
      * 获得缺省的下载目录
      *
+     * 先尝试获取应用的外部文件目录getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+     * 如果不存在（比如SD卡不存在）则返回应用的文件目录getFilesDir()
+     *
      * @param context
      * @return
      */

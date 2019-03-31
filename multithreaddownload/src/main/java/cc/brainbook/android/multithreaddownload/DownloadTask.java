@@ -66,7 +66,8 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 如果用户不配置，则尝试从下载连接connection中获得下载文件的文件名HttpDownloadUtil.getUrlFileName(HttpURLConnection connection)
  * 注意：考虑到下载文件网址中不一定含有文件名，所有不考虑从网址中获取！
  * 1.4）下载文件保存目录（可选）
- * 默认为系统SD卡的下载目录context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)，参考：Util.getDefaultFilesDir(Context context)
+ * 默认为应用的外部下载目录context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)，如果系统无SD卡返回应用的文件目录getFilesDir()
+ * 参考：Util.getDefaultFilesDir(Context context)
  * 可通过DownloadTask#setSavePath(String savePath)设置
  *
  * 2）设置进度监听（可选）
@@ -127,6 +128,17 @@ public class DownloadTask {
     public boolean mayStopTimer;    ///public供DownloadHandler访问
 
     /**
+     * 停止定时器
+     */
+    public void stopTimer() {
+        if (DEBUG) Log.d(TAG, "DownloadTask# stopTimer()# ------- 停止定时器 -------");
+
+        mayStopTimer = false;
+        mTimer.cancel();
+        mTimer = null;  ///[FIX BUG# pause后立即start所引起的重复启动问题]解决方法：在运行start()时会同时检测mTimer是否为null的条件
+    }
+
+    /**
      * 线程信息集合
      */
     public List<ThreadInfo> mThreadInfos;   ///public供DownloadHandler访问
@@ -175,29 +187,85 @@ public class DownloadTask {
 
 
     /**
+     * 初始化
+     *
+     * 创建Handler对象、检查文件网址URL和下载文件保存目录，并且
+     * 检查下载文件的文件名和大小，如果下载文件没有文件名或文件大小
+     * 则启动初始化线程由网络连接获得文件名和文件大小
+     */
+    public void init() {
+        if (DEBUG) Log.d(TAG, "DownloadTask# init()# ");
+
+        ///创建Handler对象
+        ///注意：Handler对象不能在构造中创建！因为mDownloadEvent、mOnProgressListener参数尚未准备好
+        mHandler = new DownloadHandler (
+                this,
+                mFileInfo,
+                mDownloadListener,
+                mThreadDAO);
+
+        ///检查文件网址URL
+        ///如果为null或空字符串则报错后退出
+        if (TextUtils.isEmpty(mFileInfo.getFileUrl())) {
+            ///发送消息：下载错误
+            mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
+                    new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, "The file url cannot be null."))
+                    .sendToTarget();
+            return;
+        }
+
+        ///检查下载文件保存目录
+        ///如果为null或空字符串则获得缺省的下载目录，否则创建文件下载目录
+        if (TextUtils.isEmpty(mFileInfo.getSavePath())) {
+            mFileInfo.setSavePath(Util.getDefaultFilesDirPath(mContext));
+        } else {
+            if (!Util.mkdirs(mFileInfo.getSavePath())) {
+                ///发送消息：下载失败
+                mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
+                        new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The file save path cannot be made: " + mFileInfo.getSavePath()))
+                        .sendToTarget();
+                return;
+            }
+        }
+
+        ///检查下载文件的文件名和大小
+        ///如果下载文件没有文件名或文件大小，则启动初始化线程由网络连接获得文件名和文件大小
+        if (TextUtils.isEmpty(mFileInfo.getFileName()) || mFileInfo.getFileSize() <= 0) {
+            ///启动初始化线程
+            InitThread initThread = new InitThread (
+                    mConfig,
+                    mFileInfo,
+                    mHandler);
+
+            ///线程池
+//            initThread.start();
+            sExecutorService.execute(initThread);
+
+        } else {
+            ///发送消息：下载初始化完成
+            mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED).sendToTarget();
+        }
+    }
+
+    /**
      * 开始下载
      */
     public void start() {
         if (DEBUG) Log.d(TAG, "DownloadTask# start()# mFileInfo.getState(): " + mFileInfo.getState());
 
         switch (mFileInfo.getState()) {
-            case FAILED:        ///允许：下载失败（FAILED）后开始下载start()？？？？？？？？？？？？？？？？？？
+            case INITIALIZED:   ///初始化（INITIALIZED）后开始下载start()
+                ///创建下载空占位文件
+                createEmptySaveFile();
 
-                break;
-            case NEW:           ///允许：新创建下载任务对象（NEW）后开始下载start()
-                ///初始化过程
-                init();
-
-                break;
-            case INITIALIZED:   ///允许：新创建下载任务对象后初始化（INITIALIZED）后开始下载start()
                 ///执行下载过程
                 innerStart();
 
                 break;
-            case STARTED:       ///禁止：下载开始（STARTED）后开始下载start()？？？？？？？？？？？？？？？？？？
-
+            case STARTED:       ///下载开始（STARTED）后开始下载start()？？？？？？？？？？？？？？？？？？
+                ///忽略
                 break;
-            case PAUSED:        ///允许：下载暂停（PAUSED）后开始下载start()
+            case PAUSED:        ///下载暂停（PAUSED）后开始下载start()
                 ///[FIX BUG#pause后立即start所引起的重复启动问题]运行start()时会同时检测mTimer是否为null的条件
                 if (mTimer != null) {
                     return;
@@ -207,14 +275,23 @@ public class DownloadTask {
                 innerStart();
 
                 break;
-            case STOPPED:       ///允许：下载停止（STOPPED）后开始下载start()？？？？？？？？？？？？？？？？？？
+            case SUCCEED:       ///允许：下载成功（SUCCEED）后开始下载start()
+                ///同步发送消息：下载停止
+                mHandler.handleMessage(mHandler.obtainMessage(DownloadHandler.MSG_STOPPED));
+
+                ///创建下载空占位文件
+                createEmptySaveFile();
+
                 ///执行下载过程
                 innerStart();
 
                 break;
-            case SUCCEED:       ///允许：下载成功（SUCCEED）后开始下载start()
-                ///同步发送消息：下载停止
-                mHandler.handleMessage(mHandler.obtainMessage(DownloadHandler.MSG_STOPPED));
+            case FAILED:        ///下载失败（FAILED）后开始下载start()？？？？？？？？？？？？？？？？？？
+                // todo ...
+                break;
+            case STOPPED:       ///下载停止（STOPPED）后开始下载start()？？？？？？？？？？？？？？？？？？
+                ///创建下载空占位文件
+                createEmptySaveFile();
 
                 ///执行下载过程
                 innerStart();
@@ -230,16 +307,10 @@ public class DownloadTask {
         if (DEBUG) Log.d(TAG, "DownloadTask# pause()# mFileInfo.getState(): " + mFileInfo.getState());
 
         switch (mFileInfo.getState()) {
-            case FAILED:        ///禁止：下载失败（FAILED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
-
+            case INITIALIZED:   ///初始化（INITIALIZED）后暂停下载pause()
+                ///忽略
                 break;
-            case NEW:           ///禁止：新创建下载任务对象（NEW）后暂停下载pause()
-
-                break;
-            case INITIALIZED:   ///禁止：新创建下载任务对象后初始化（INITIALIZED）后暂停下载pause()
-
-                break;
-            case STARTED:       ///允许：下载开始（STARTED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
+            case STARTED:       ///下载开始（STARTED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
                 ///更新文件信息的状态：下载暂停
                 mFileInfo.setState(DownloadState.PAUSED);
 
@@ -255,14 +326,17 @@ public class DownloadTask {
                 }
 
                 break;
-            case PAUSED:        ///禁止：下载暂停（PAUSED）后暂停下载pause()
-
+            case PAUSED:        ///下载暂停（PAUSED）后暂停下载pause()
+                ///忽略
                 break;
-            case STOPPED:       ///禁止：下载停止（STOPPED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
-
+            case SUCCEED:       ///下载成功（SUCCEED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
+                ///忽略
                 break;
-            case SUCCEED:       ///禁止：下载成功（SUCCEED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
-
+            case FAILED:        ///下载失败（FAILED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
+                ///忽略
+                break;
+            case STOPPED:       ///下载停止（STOPPED）后暂停下载pause()？？？？？？？？？？？？？？？？？？
+                ///忽略
                 break;
         }
     }
@@ -274,82 +348,29 @@ public class DownloadTask {
         if (DEBUG) Log.d(TAG, "DownloadTask# stop()# mFileInfo.getState(): " + mFileInfo.getState());
 
         switch (mFileInfo.getState()) {
-            case FAILED:        ///允许：下载失败（FAILED）后停止下载stop()？？？？？？？？？？？？？？？？？？
-                // todo ...
+            case INITIALIZED:   ///初始化（INITIALIZED）后停止下载stop()
+                ///忽略
                 break;
-            case NEW:           ///禁止：新创建下载任务对象（NEW）后停止下载stop()
-
-                break;
-            case INITIALIZED:   ///禁止：新创建下载任务对象后初始化（INITIALIZED）后停止下载stop()
-
-                break;
-            case STARTED:       ///允许：下载开始（STARTED）后停止下载stop()？？？？？？？？？？？？？？？？？？
+            case STARTED:       ///下载开始（STARTED）后停止下载stop()？？？？？？？？？？？？？？？？？？
                 ///更新文件信息的状态：下载停止
                 ///注意：start/pause/stop尽量提早设置状态（所以不放在Handler中），避免短时间内连续点击造成的重复操作！
                 mFileInfo.setState(DownloadState.STOPPED);
 
                 break;
-            case PAUSED:        ///允许：下载暂停（PAUSED）后停止下载stop()？？？？？？？？？？？？？？？？？？
+            case PAUSED:        ///下载暂停（PAUSED）后停止下载stop()？？？？？？？？？？？？？？？？？？
                 ///发送消息：下载停止
                 mHandler.obtainMessage(DownloadHandler.MSG_STOPPED).sendToTarget();
 
                 break;
-            case STOPPED:       ///禁止：下载停止（STOPPED）后停止下载stop()？？？？？？？？？？？？？？？？？？
-
-                break;
-            case SUCCEED:       ///允许：下载成功（SUCCEED）后停止下载stop()？？？？？？？？？？？？？？？？？？
+            case SUCCEED:       ///下载成功（SUCCEED）后停止下载stop()？？？？？？？？？？？？？？？？？？
                 // todo ...
                 break;
-        }
-    }
-
-    private void init() {
-        if (DEBUG) Log.d(TAG, "DownloadTask# init()# ");
-
-        ///创建Handler对象
-        ///注意：Handler对象不能在构造中创建！因为mDownloadEvent、mOnProgressListener参数尚未准备好
-        mHandler = new DownloadHandler (
-                this,
-                mFileInfo,
-                mDownloadListener,
-                mThreadDAO);
-
-
-        /* ----------- 检验文件网址URL、保存目录 ----------- */
-        if (TextUtils.isEmpty(mFileInfo.getFileUrl())) {
-            ///发送消息：下载错误
-            mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
-                    new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, "The file url cannot be null."))
-                    .sendToTarget();
-            return;
-        }
-        if (TextUtils.isEmpty(mFileInfo.getSavePath())) {
-            mFileInfo.setSavePath(Util.getDefaultFilesDirPath(mContext));
-        } else {
-            if (!Util.mkdirs(mFileInfo.getSavePath())) {
-                ///发送消息：下载失败
-                mHandler.obtainMessage(DownloadHandler.MSG_FAILED,
-                        new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The file save path cannot be made: " + mFileInfo.getSavePath()))
-                        .sendToTarget();
-                return;
-            }
-        }
-
-        ///如果没有文件名或文件大小，则启动初始化线程由网络连接获得文件名、文件长度
-        if (TextUtils.isEmpty(mFileInfo.getFileName()) || mFileInfo.getFileSize() <= 0) {
-            ///启动初始化线程
-            InitThread initThread = new InitThread (
-                    mConfig,
-                    mFileInfo,
-                    mHandler);
-
-            ///线程池
-//            initThread.start();
-            sExecutorService.execute(initThread);
-
-        } else {
-            ///发送消息：下载初始化
-            mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED).sendToTarget();
+            case FAILED:        ///下载失败（FAILED）后停止下载stop()？？？？？？？？？？？？？？？？？？
+                // todo ...
+                break;
+            case STOPPED:       ///下载停止（STOPPED）后停止下载stop()？？？？？？？？？？？？？？？？？？
+                ///忽略
+                break;
         }
     }
 
@@ -366,6 +387,7 @@ public class DownloadTask {
         }
 
         if (mThreadInfos.isEmpty()) { ///如果mThreadInfos为空
+
             ///插入数据库记录前，再次确保删除下载文件的所有线程信息
             mThreadDAO.deleteAllThreadInfos(mFileInfo.getFileUrl(), mFileInfo.getFileName(), mFileInfo.getFileSize(), mFileInfo.getSavePath());
 
@@ -390,36 +412,6 @@ public class DownloadTask {
             ///发送消息：下载成功
             mHandler.obtainMessage(DownloadHandler.MSG_SUCCEED).sendToTarget();
             return;
-        }
-
-        ///注意：不必一定要用setLength()创建占位文件！///？？？？？？猜想：也许影响速度！
-        ///创建下载空文件成功
-        if (DownloadState.INITIALIZED == mFileInfo.getState()
-                || DownloadState.SUCCEED == mFileInfo.getState()
-                || DownloadState.STOPPED == mFileInfo.getState()) {
-            ///获得保存文件
-            File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
-
-            ///如果保存文件存在则删除
-            if (saveFile.exists()) {
-                if (!saveFile.delete()) {
-                    throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file cannot be deleted: " + saveFile);
-                }
-            }
-
-            ///创建下载空文件
-            RandomAccessFile randomAccessFile = null;
-            try {
-                randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile, "rwd");
-                HttpDownloadUtil.randomAccessFileSetLength(randomAccessFile, mFileInfo.getFileSize());
-            } catch (Exception e) {
-                ///发送消息：下载错误
-                mHandler.obtainMessage(DownloadHandler.MSG_FAILED, e).sendToTarget();
-                return;
-            } finally {
-                ///关闭流Closeable
-                Util.closeIO(randomAccessFile);
-            }
         }
 
         ///更新文件信息的状态：下载开始
@@ -513,17 +505,45 @@ public class DownloadTask {
 
                 ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
                 if (mayStopTimer) {
-                    if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 取消定时器 -------");
-
-                    mayStopTimer = false;
-                    mTimer.cancel();
-                    mTimer = null;  ///[FIX BUG# pause后立即start所引起的重复启动问题]解决方法：在运行start()时会同时检测mTimer是否为null的条件
+                    ///停止定时器
+                    stopTimer();
                 }
             }
         }, Config.progressDelay, mConfig.progressInterval);
 
         ///发送消息：下载开始
         mHandler.obtainMessage(DownloadHandler.MSG_STARTED).sendToTarget();
+    }
+
+    /**
+     * 创建下载空占位文件
+     *
+     * 注意：不必一定要创建占位文件！///？？？？？？猜想：也许影响速度！
+     */
+    private void createEmptySaveFile() {
+        ///获得保存文件
+        File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
+
+        ///如果保存文件存在则删除
+        if (saveFile.exists()) {
+            if (!saveFile.delete()) {
+                throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file cannot be deleted: " + saveFile);
+            }
+        }
+
+        ///创建下载空文件
+        RandomAccessFile randomAccessFile = null;
+        try {
+            randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile, "rwd");
+            HttpDownloadUtil.randomAccessFileSetLength(randomAccessFile, mFileInfo.getFileSize());
+        } catch (Exception e) {
+            ///发送消息：下载错误
+            mHandler.obtainMessage(DownloadHandler.MSG_FAILED, e).sendToTarget();
+        } finally {
+            ///关闭流Closeable
+            Util.closeIO(randomAccessFile);
+        }
+
     }
 
     /**

@@ -48,11 +48,17 @@ public class InitThread extends Thread {
                 mFileInfo.setFileName(HttpDownloadUtil.getUrlFileName(connection));
             }
 
-            ///由网络连接获得文件长度（建议用long类型，int类型最大为2GB）
-            mFileInfo.setFileSize(connection.getContentLength());
+            ///由网络连接获得文件长度
             if (mFileInfo.getFileSize() <= 0) {
-                throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file size is not valid: " + mFileInfo.getFileSize());
+                ///注意：connection.getContentLength()最大为2GB，使用connection.getHeaderField("Content-Length")可以突破2GB限制
+                ///http://szuwest.github.io/tag/android-download.html
+//            mFileInfo.setFileSize(connection.getContentLength());
+                mFileInfo.setFileSize(Long.valueOf(connection.getHeaderField("Content-Length")));
+                if (mFileInfo.getFileSize() <= 0) {
+                    throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file size is not valid: " + mFileInfo.getFileSize());
+                }
             }
+
         } catch (Exception e) {
             ///发送消息：下载错误
             mHandler.obtainMessage(DownloadHandler.MSG_FAILED, e).sendToTarget();
@@ -64,7 +70,7 @@ public class InitThread extends Thread {
             }
         }
 
-        ///发送消息：下载初始化
+        ///发送消息：下载初始化完成
         mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED).sendToTarget();
     }
 

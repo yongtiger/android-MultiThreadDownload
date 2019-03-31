@@ -43,6 +43,8 @@ public class DownloadHandler extends Handler {
 
     @Override
     public void handleMessage(Message msg) {
+        super.handleMessage(msg);
+
         switch (msg.what) {
             case MSG_PROGRESS:
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_PROGRESS");
@@ -54,49 +56,41 @@ public class DownloadHandler extends Handler {
                         long diffFinishedBytes = ((long[]) msg.obj)[1];
                         mDownloadListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos, diffTimeMillis, diffFinishedBytes);
                     } else {
-                        ///文件信息状态为运行时需要修正进度更新显示的下载速度为0
+                        ///修正进度更新显示的下载速度为0
                         mDownloadListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos,0, 0);
                     }
-                }
-
-                break;
-            case MSG_FAILED:
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_FAILED");
-
-                ///更新文件信息的状态：下载错误
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：mFileInfo.setState(DownloadState.FAILED)");
-                mFileInfo.setState(DownloadState.FAILED);
-
-                ///失败的回调接口
-                if (mDownloadListener != null) {
-                    mDownloadListener.onError(mFileInfo, mDownloadTask.mThreadInfos, (Exception) msg.obj);
                 }
 
                 break;
             case MSG_INITIALIZED:
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_INITIALIZED");
 
-                ///更新文件信息的状态：初始化结束
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：mFileInfo.setState(DownloadState.INITIALIZED)");
+                ///停止定时器
+                mDownloadTask.stopTimer();
+
+                ///修正进度更新显示的下载速度为0
+                if (mDownloadListener != null) {
+                    mDownloadListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos,0, 0);
+                }
+
+                ///更新文件信息的状态：初始化结束（INITIALIZED）
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：初始化结束（INITIALIZED）");
                 mFileInfo.setState(DownloadState.INITIALIZED);
 
-                ///状态变化的回调接口
+                ///状态变化的回调接口：初始化结束（INITIALIZED）
                 if (mDownloadListener != null) {
                     mDownloadListener.onStateChanged(mFileInfo, mDownloadTask.mThreadInfos, DownloadState.INITIALIZED);
                 }
-
-                ///开始下载
-                mDownloadTask.start();
 
                 break;
             case MSG_STARTED:
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_STARTED");
 
-                ///更新文件信息的状态：下载开始
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：mFileInfo.setState(DownloadState.STARTED)");
+                ///更新文件信息的状态：下载开始（STARTED）
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：下载开始（STARTED）");
                 mFileInfo.setState(DownloadState.STARTED);
 
-                ///下载开始的回调接口
+                ///状态变化的回调接口：下载开始（STARTED）
                 if (mDownloadListener != null) {
                     mDownloadListener.onStateChanged(mFileInfo, mDownloadTask.mThreadInfos, DownloadState.STARTED);
                 }
@@ -105,15 +99,15 @@ public class DownloadHandler extends Handler {
             case MSG_PAUSED:
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_PAUSED");
 
-                ///更新文件信息的状态：下载暂停
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：mFileInfo.setState(DownloadState.PAUSED)");
-                mFileInfo.setState(DownloadState.PAUSED);
-
                 ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]可以取消定时器Timer
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# barrier: 可以取消定时器Timer");
                 mDownloadTask.mayStopTimer = true;
 
-                ///下载暂停的回调接口
+                ///更新文件信息的状态：下载暂停（PAUSED）
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：下载暂停（PAUSED）");
+                mFileInfo.setState(DownloadState.PAUSED);
+
+                ///状态变化的回调接口：下载暂停（PAUSED）
                 if (mDownloadListener != null) {
                     mDownloadListener.onStateChanged(mFileInfo, mDownloadTask.mThreadInfos, DownloadState.PAUSED);
                 }
@@ -122,32 +116,48 @@ public class DownloadHandler extends Handler {
             case MSG_SUCCEED:
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_SUCCEED");
 
-                ///更新文件信息的状态：下载成功
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：mFileInfo.setState(DownloadState.SUCCEED)");
-                mFileInfo.setState(DownloadState.SUCCEED);
-
-                ///更新进度的回调接口
-                if (mDownloadListener != null) {
-                    ///文件信息状态为运行时需要修正进度更新显示的下载速度为0
-                    mDownloadListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos,0, 0);
-                }
-
                 ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]可以取消定时器Timer
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 可以取消定时器Timer");
                 mDownloadTask.mayStopTimer = true;
 
-                ///下载成功的回调接口
+                ///修正进度更新显示的下载速度为0
+                if (mDownloadListener != null) {
+                    mDownloadListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos,0, 0);
+                }
+
+                ///更新文件信息的状态：下载成功（SUCCEED）
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：下载成功（SUCCEED）");
+                mFileInfo.setState(DownloadState.SUCCEED);
+
+                ///状态变化的回调接口：下载成功（SUCCEED）
                 if (mDownloadListener != null) {
                     mDownloadListener.onStateChanged(mFileInfo, mDownloadTask.mThreadInfos, DownloadState.SUCCEED);
                 }
 
                 break;
+            case MSG_FAILED:
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_FAILED");
+
+                ///停止定时器
+                mDownloadTask.stopTimer();
+
+                ///错误的回调接口
+                if (mDownloadListener != null) {
+                    mDownloadListener.onError(mFileInfo, mDownloadTask.mThreadInfos, (Exception) msg.obj);
+                }
+
+                ///更新文件信息的状态：下载错误（FAILED）
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：下载错误（FAILED）");
+                mFileInfo.setState(DownloadState.FAILED);
+
+                ///状态变化的回调接口：下载失败（FAILED）
+                if (mDownloadListener != null) {
+                    mDownloadListener.onStateChanged(mFileInfo, mDownloadTask.mThreadInfos, DownloadState.FAILED);
+                }
+
+                break;
             case MSG_STOPPED:
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_STOPPED");
-
-                ///更新文件信息的状态：下载停止
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：mFileInfo.setState(DownloadState.STOPPED)");
-                mFileInfo.setState(DownloadState.STOPPED);
 
                 ///删除数据库中下载文件的所有线程信息
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_STOPPED: 删除下载线程");
@@ -165,24 +175,25 @@ public class DownloadHandler extends Handler {
                 ///清空线程信息集合（innerStart()中不必访问数据库！而如为null则需从数据库加载）
                 mDownloadTask.mThreadInfos.clear();
 
-                ///更新进度的回调接口
+                ///停止定时器
+                mDownloadTask.stopTimer();
+
+                ///修正进度更新显示的下载速度为0
                 if (mDownloadListener != null) {
-                    ///文件信息状态为运行时需要修正进度更新显示的下载速度为0
                     mDownloadListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos,0, 0);
                 }
 
-                ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]可以取消定时器Timer
-                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 可以取消定时器Timer");
-                mDownloadTask.mayStopTimer = true;
+                ///更新文件信息的状态：下载停止（STOPPED）
+                if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# 更新文件信息的状态：下载停止（STOPPED）");
+                mFileInfo.setState(DownloadState.STOPPED);
 
-                ///下载停止的回调接口
+                ///状态变化的回调接口：下载停止（STOPPED）
                 if (mDownloadListener != null) {
                     mDownloadListener.onStateChanged(mFileInfo, mDownloadTask.mThreadInfos, DownloadState.STOPPED);
                 }
 
                 break;
         }
-        super.handleMessage(msg);
     }
 
 }
