@@ -1,7 +1,6 @@
 package cc.brainbook.android.multithreaddownload.listener;
 
 ///\com\amazonaws\mobileconnectors\s3\transferutility\DownloadListener.java
-
 import java.util.List;
 
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;

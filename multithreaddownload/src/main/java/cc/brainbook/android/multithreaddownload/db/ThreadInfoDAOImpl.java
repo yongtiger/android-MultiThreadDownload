@@ -11,22 +11,27 @@ import java.util.List;
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 
-public class ThreadDAOImpl implements ThreadDAO {
+public class ThreadInfoDAOImpl implements ThreadInfoDAO {
     private DBHelper mHelper;
 
-    public ThreadDAOImpl(Context context) {
+    public ThreadInfoDAOImpl(Context context) {
         mHelper = DBHelper.getInstance(context);
     }
 
     @Override
-    public synchronized long insertThread(ThreadInfo threadInfo) {
+    public synchronized long saveThreadInfo(ThreadInfo threadInfo,
+                                            long created_time_millis,
+                                            long updated_time_millis) {
         SQLiteDatabase db = mHelper.getWritableDatabase();
 
         ///https://developer.android.com/training/data-storage/sqlite#WriteDbRow
         ///Create a new map of values, where column names are the keys
         ContentValues values = new ContentValues();
         values.put("state", threadInfo.getState().toString());
-        values.put("finished", threadInfo.getFinishedBytes());
+        values.put("finished_bytes", threadInfo.getFinishedBytes());
+        values.put("finished_time_millis", threadInfo.getFinishedTimeMillis());
+        values.put("created_time_millis", threadInfo.getCreatedTimeMillis());
+        values.put("updated_time_millis", threadInfo.getUpdatedTimeMillis());
         values.put("start", threadInfo.getStart());
         values.put("end", threadInfo.getEnd());
         values.put("file_url", threadInfo.getFileUrl());
@@ -42,14 +47,20 @@ public class ThreadDAOImpl implements ThreadDAO {
     }
 
     @Override
-    public synchronized int updateThread(long thread_id, DownloadState state, long finished) {
+    public synchronized int updateThreadInfo(long thread_id,
+                                             DownloadState state,
+                                             long finishedBytes,
+                                             long finishedTimeMillis,
+                                             long updatedTimeMillis) {
         SQLiteDatabase db = mHelper.getWritableDatabase();
 
         ///https://developer.android.com/training/data-storage/sqlite#UpdateDbRow
         ///New value for one column
         ContentValues values = new ContentValues();
         values.put("state", state.toString());
-        values.put("finished", finished);
+        values.put("finished_bytes", finishedBytes);
+        values.put("finished_time_millis", finishedTimeMillis);
+        values.put("updated_time_millis", updatedTimeMillis);
 
         ///Which row to update, based on the title
         String selection = "_id=?";
@@ -66,7 +77,10 @@ public class ThreadDAOImpl implements ThreadDAO {
     }
 
     @Override
-    public synchronized int deleteAllThread(String fileUrl, String fileName, long fileSize, String savePath) {
+    public synchronized int deleteAllThreadInfos(String fileUrl,
+                                                 String fileName,
+                                                 long fileSize,
+                                                 String savePath) {
         SQLiteDatabase db = mHelper.getWritableDatabase();
 
         ///https://developer.android.com/training/data-storage/sqlite#DeleteDbRow
@@ -82,7 +96,10 @@ public class ThreadDAOImpl implements ThreadDAO {
     }
 
     @Override
-    public synchronized List<ThreadInfo> getAllThreads(String fileUrl, String fileName, long fileSize, String savePath) {
+    public synchronized List<ThreadInfo> loadAllThreadsInfos(String fileUrl,
+                                                             String fileName,
+                                                             long fileSize,
+                                                             String savePath) {
         List<ThreadInfo> list = new ArrayList<>();
         SQLiteDatabase db = mHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery("select * from thread_info where file_url=? and file_name=? and file_size=? and save_path=?",
@@ -91,7 +108,8 @@ public class ThreadDAOImpl implements ThreadDAO {
             ThreadInfo threadInfo = new ThreadInfo();
 
             threadInfo.setState(DownloadState.getState(cursor.getString(cursor.getColumnIndex("state"))));
-            threadInfo.setFinishedBytes(cursor.getLong(cursor.getColumnIndex("finished")));
+            threadInfo.setFinishedBytes(cursor.getLong(cursor.getColumnIndex("finished_bytes")));
+            threadInfo.setFinishedTimeMillis(cursor.getLong(cursor.getColumnIndex("finished_time_millis")));
             threadInfo.setId(cursor.getInt(cursor.getColumnIndex("_id")));
             threadInfo.setStart(cursor.getLong(cursor.getColumnIndex("start")));
             threadInfo.setEnd(cursor.getLong(cursor.getColumnIndex("end")));

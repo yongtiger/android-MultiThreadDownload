@@ -9,7 +9,8 @@ public class DBHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "download.db";
     private static final int VERSION = 1;
     private static final String SQL_CREATE ="create table thread_info(_id integer primary key AUTOINCREMENT," +
-            "state, finished long, file_url text, file_name text, file_size long, save_path text, start long, end long)";
+            "state, finished_bytes long, finished_time_millis long, created_time_millis long, updated_time_millis long, " +
+            "file_url text, file_name text, " + "file_size long, save_path text, start long, end long)";
     private static final String SQL_DROP ="drop table if exists thread_info";
 
     // 单例模式：

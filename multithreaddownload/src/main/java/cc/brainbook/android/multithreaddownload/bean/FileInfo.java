@@ -17,13 +17,6 @@ public class FileInfo {
     private volatile DownloadState state;
 
     /**
-     * 已经完成的总耗时（毫秒）
-     *
-     * 注意：考虑到断点续传，在停止状态不计算在内！
-     */
-    private long finishedTimeMillis;
-
-    /**
      * 已经完成的总字节数
      *
      * 注意：考虑到多线程访问，必须声明为volatile（是一种轻量级的synchronized）
@@ -32,6 +25,14 @@ public class FileInfo {
      * https://blog.csdn.net/changlei_shennan/article/details/44039905
      */
     private volatile long finishedBytes;
+
+    /**
+     * 已经完成的总耗时（毫秒）
+     */
+    private long finishedTimeMillis;
+
+    private long createdTimeMillis;
+    private long updatedTimeMillis;
 
     /**
      * 以下四个决定了下载文件的唯一性，即ID
@@ -43,6 +44,8 @@ public class FileInfo {
 
     public FileInfo() {
         state = DownloadState.NEW;
+        createdTimeMillis = System.currentTimeMillis();
+        updatedTimeMillis = System.currentTimeMillis();
     }
 
     public DownloadState getState() {
@@ -67,6 +70,22 @@ public class FileInfo {
 
     public void setFinishedBytes(long finishedBytes) {
         this.finishedBytes = finishedBytes;
+    }
+
+    public long getCreatedTimeMillis() {
+        return createdTimeMillis;
+    }
+
+    public void setCreatedTimeMillis(long createdTimeMillis) {
+        this.createdTimeMillis = createdTimeMillis;
+    }
+
+    public long getUpdatedTimeMillis() {
+        return updatedTimeMillis;
+    }
+
+    public void setUpdatedTimeMillis(long updatedTimeMillis) {
+        this.updatedTimeMillis = updatedTimeMillis;
     }
 
     public String getFileUrl() {
@@ -107,6 +126,8 @@ public class FileInfo {
                 "state=" + state +
                 ", finishedTimeMillis=" + finishedTimeMillis +
                 ", finishedBytes=" + finishedBytes +
+                ", createdTimeMillis=" + createdTimeMillis +
+                ", updatedTimeMillis=" + updatedTimeMillis +
                 ", fileUrl='" + fileUrl + '\'' +
                 ", fileName='" + fileName + '\'' +
                 ", fileSize=" + fileSize +

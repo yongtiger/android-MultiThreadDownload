@@ -1,7 +1,5 @@
 package cc.brainbook.android.multithreaddownload.thread;
 
-import android.util.Log;
-
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -9,41 +7,35 @@ import java.net.HttpURLConnection;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.CyclicBarrier;
 
-import cc.brainbook.android.multithreaddownload.DownloadTask;
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
-import cc.brainbook.android.multithreaddownload.db.ThreadDAO;
+import cc.brainbook.android.multithreaddownload.db.ThreadInfoDAO;
 import cc.brainbook.android.multithreaddownload.handler.DownloadHandler;
 import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
 import cc.brainbook.android.multithreaddownload.util.Util;
 
-import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
-
+/**
+ * 下载线程
+ */
 public class DownloadThread extends Thread {
-    private static final String TAG = "TAG";
-
-    private DownloadTask mDownloadTask;
     private Config mConfig;
     private FileInfo mFileInfo;
     private DownloadHandler mHandler;
     private ThreadInfo mThreadInfo;
-    private ThreadDAO mThreadDAO;
+    private ThreadInfoDAO mThreadDAO;
 
     ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
     ///https://www.cnblogs.com/dolphin0520/p/3920397.html
     private CyclicBarrier mBarrier;
 
-    public DownloadThread(DownloadTask downloadTask,
-                          Config config,
+    public DownloadThread(Config config,
                           FileInfo fileInfo,
                           DownloadHandler handler,
                           ThreadInfo threadInfo,
-                          ThreadDAO threadDAO,
-                          CyclicBarrier barrier
-    ) {
-        this.mDownloadTask = downloadTask;
+                          ThreadInfoDAO threadDAO,
+                          CyclicBarrier barrier) {
         this.mConfig = config;
         this.mFileInfo = fileInfo;
         this.mHandler = handler;
@@ -73,8 +65,8 @@ public class DownloadThread extends Thread {
             ///设置连接的下载范围
             connection.setRequestProperty("range", "bytes="+ start + "-" + end);
 
-//            ///发起网络连接
-//            HttpDownloadUtil.connect(connection);
+            ///发起网络连接
+            HttpDownloadUtil.connect(connection);
 
             ///如果网络连接connection的响应码为206，则开始下载过程，否则抛出异常
             HttpDownloadUtil.handleResponseCode(connection, HttpURLConnection.HTTP_PARTIAL);
@@ -85,7 +77,7 @@ public class DownloadThread extends Thread {
             ///获得保存文件对象
             File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
             ///获得保存文件的随机访问文件对象RandomAccessFile，并定位
-            randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile);
+            randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile, "rwd");
             HttpDownloadUtil.randomAccessFileSeek(randomAccessFile, start);
             ///由文件的输出流对象获得FileChannel对象
             channel = randomAccessFile.getChannel();
@@ -109,23 +101,24 @@ public class DownloadThread extends Thread {
             while ((readLength = HttpDownloadUtil.bufferedInputStreamRead(bufferedInputStream, bytes)) != -1) {
                 ///写入字节缓冲区内容到文件输出流
 //                HttpDownloadUtil.randomAccessFileWrite(randomAccessFile, bytes, readLength);    ///随机访问文件对象RandomAccessFile的写操作
-                HttpDownloadUtil.channelWrite(channel, bytes, readLength);    ///FileChannel的写操作
+                HttpDownloadUtil.channelWriteByteBuffer(channel, bytes, readLength);    ///FileChannel的写操作（ByteBuffer）
+//                HttpDownloadUtil.channelWriteMappedByteBuffer(channel, bytes, readLength, start);    ///FileChannel的写操作（MappedByteBuffer）///???????MappedByteBuffer没有调试通过！
 
                 ///累计整个文件的下载进度
                 mFileInfo.setFinishedBytes(mFileInfo.getFinishedBytes() + readLength);
                 ///累计每个线程的下载进度
                 mThreadInfo.setFinishedBytes(mThreadInfo.getFinishedBytes() + readLength);
 
-                if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), " + mThreadInfo.getStart() + " - " + mThreadInfo.getEnd() + ", Finished: " +mThreadInfo.getFinishedBytes());
-
                 if (mFileInfo.getState() == DownloadState.PAUSED) {  ///暂停下载线程
                     ///更新线程信息的状态：下载暂停
-                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: --------- DownloadState.PAUSED --------- ");
                     mThreadInfo.setState(DownloadState.PAUSED);
 
                     ///线程信息保存到数据库
-                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
-                    mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.PAUSED, mThreadInfo.getFinishedBytes());
+                    mThreadDAO.updateThreadInfo(mThreadInfo.getId(),
+                            DownloadState.PAUSED,
+                            mThreadInfo.getFinishedBytes(),
+                            mFileInfo.getFinishedTimeMillis(),
+                            mFileInfo.getUpdatedTimeMillis());
 
                     ///等待所有线程暂停后再做相应处理
                     mBarrier.await();
@@ -133,12 +126,14 @@ public class DownloadThread extends Thread {
                     return;
                 } else if (mFileInfo.getState() == DownloadState.STOPPED) {   ///停止下载线程
                     ///更新线程信息的状态：下载停止
-                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), Status: --------- DownloadState.STOPPED --------- ");
                     mThreadInfo.setState(DownloadState.STOPPED);
 
                     ///线程信息保存到数据库
-                    if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
-                    mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.STOPPED, mThreadInfo.getFinishedBytes());
+                    mThreadDAO.updateThreadInfo(mThreadInfo.getId(),
+                            DownloadState.STOPPED,
+                            mThreadInfo.getFinishedBytes(),
+                            mFileInfo.getFinishedTimeMillis(),
+                            mFileInfo.getUpdatedTimeMillis());
 
                     ///等待所有线程停止后再做相应处理
                     mBarrier.await();
@@ -151,8 +146,11 @@ public class DownloadThread extends Thread {
             mThreadInfo.setState(DownloadState.SUCCEED);
 
             ///线程信息保存到数据库
-            if (DEBUG) Log.d(TAG, "DownloadThread# run()# Thread name(" + Thread.currentThread().getName() + "), mThreadDAO.updateThread(" + mThreadInfo.getId() + ", " + mThreadInfo.getFinishedBytes() + ")");
-            mThreadDAO.updateThread(mThreadInfo.getId(), DownloadState.SUCCEED, mThreadInfo.getFinishedBytes());
+            mThreadDAO.updateThreadInfo(mThreadInfo.getId(),
+                    DownloadState.SUCCEED,
+                    mThreadInfo.getFinishedBytes(),
+                    mFileInfo.getFinishedTimeMillis(),
+                    mFileInfo.getUpdatedTimeMillis());
 
             ///等待所有线程完成后再做相应处理
             mBarrier.await();

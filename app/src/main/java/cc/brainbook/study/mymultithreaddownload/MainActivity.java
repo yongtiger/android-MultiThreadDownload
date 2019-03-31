@@ -110,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
                 .setFileUrl("http://ljdy.tv/test/ljdy.apk")
 //                .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
-                .setThreadCount(3)
+//                .setThreadCount(3)
                 .setDownloadListener(mDownloadListener);
 
     }
@@ -138,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
             downloadTask.stop();
         }
     }
+
     private void pauseDownload(DownloadTask downloadTask) {
         if (downloadTask != null) {
             downloadTask.pause();
@@ -183,18 +184,17 @@ public class MainActivity extends AppCompatActivity {
                 case FAILED:
 
                     break;
-                case WAITING_FOR_NETWORK:
-
-                    break;
                 case UNKNOWN:
 
                     break;
             }
 
             Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# fileInfo: " + fileInfo);
-            for (ThreadInfo threadInfo : threadInfos) {
-                Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# threadInfos: "
-                        + threadInfo.getId() + ", " + threadInfo.getState() + ", " + threadInfo.getFinishedBytes());
+            if (threadInfos != null) {
+                for (ThreadInfo threadInfo : threadInfos) {
+                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# threadInfos: "
+                            + threadInfo.getId() + ", " + threadInfo.getState() + ", " + threadInfo.getFinishedBytes());
+                }
             }
             Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ------------------------------");
         }
@@ -202,9 +202,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onProgress(FileInfo fileInfo, List<ThreadInfo> threadInfos, long diffTimeMillis, long diffFinishedBytes) {
             Log.d(TAG, "MainActivity# onProgress()# fileInfo: " + fileInfo);
-//            for (ThreadInfo threadInfo : threadInfos) {
-//                Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# threadInfos: "
-//                        + threadInfo.getId() + ", " + threadInfo.getState() + ", " + threadInfo.getFinishedBytes());
+//            if (threadInfos != null) {
+//                for (ThreadInfo threadInfo : threadInfos) {
+//                    Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# threadInfos: "
+//                            + threadInfo.getId() + ", " + threadInfo.getState() + ", " + threadInfo.getFinishedBytes());
+//                }
 //            }
             Log.d(TAG, "MainActivity# onProgress()# diffTimeMillis: " + diffTimeMillis);
             Log.d(TAG, "MainActivity# onProgress()# diffFinishedBytes: " + diffFinishedBytes);

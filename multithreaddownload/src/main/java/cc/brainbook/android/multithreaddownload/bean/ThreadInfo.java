@@ -17,6 +17,14 @@ public class ThreadInfo {
      */
     private long finishedBytes;
 
+    /**
+     * 已经完成的总耗时（毫秒）
+     */
+    private long finishedTimeMillis;
+
+    private long createdTimeMillis;
+    private long updatedTimeMillis;
+
     private long id;
     private long start;
     private long end;
@@ -31,6 +39,9 @@ public class ThreadInfo {
 
     public ThreadInfo(DownloadState state,
                       long finishedBytes,
+                      long finishedTimeMillis,
+                      long createdTimeMillis,
+                      long updatedTimeMillis,
                       long id,
                       long start,
                       long end,
@@ -41,6 +52,9 @@ public class ThreadInfo {
     ) {
         this.state = state;
         this.finishedBytes = finishedBytes;
+        this.finishedTimeMillis = finishedTimeMillis;
+        this.createdTimeMillis = createdTimeMillis;
+        this.updatedTimeMillis = updatedTimeMillis;
         this.id = id;
         this.start = start;
         this.end = end;
@@ -64,6 +78,30 @@ public class ThreadInfo {
 
     public void setFinishedBytes(long finishedBytes) {
         this.finishedBytes = finishedBytes;
+    }
+
+    public long getFinishedTimeMillis() {
+        return finishedTimeMillis;
+    }
+
+    public void setFinishedTimeMillis(long finishedTimeMillis) {
+        this.finishedTimeMillis = finishedTimeMillis;
+    }
+
+    public long getCreatedTimeMillis() {
+        return createdTimeMillis;
+    }
+
+    public void setCreatedTimeMillis(long createdTimeMillis) {
+        this.createdTimeMillis = createdTimeMillis;
+    }
+
+    public long getUpdatedTimeMillis() {
+        return updatedTimeMillis;
+    }
+
+    public void setUpdatedTimeMillis(long updatedTimeMillis) {
+        this.updatedTimeMillis = updatedTimeMillis;
     }
 
     public long getId() {
@@ -127,6 +165,9 @@ public class ThreadInfo {
         return "ThreadInfo{" +
                 "state=" + state +
                 ", finishedBytes=" + finishedBytes +
+                ", finishedTimeMillis=" + finishedTimeMillis +
+                ", createdTimeMillis=" + createdTimeMillis +
+                ", updatedTimeMillis=" + updatedTimeMillis +
                 ", id=" + id +
                 ", start=" + start +
                 ", end=" + end +

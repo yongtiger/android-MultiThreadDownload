@@ -1,8 +1,12 @@
 package cc.brainbook.android.multithreaddownload.util;
 
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -14,12 +18,17 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 
+import static java.nio.ByteBuffer.wrap;
+
 public class HttpDownloadUtil {
 
+
+    /* ---------------- 网络连接---------------- */
     /**
      * 由下载文件的URL网址建立网络连接
      *
@@ -152,19 +161,38 @@ public class HttpDownloadUtil {
         return filename;
     }
 
+
+    /* ---------------- 文件读写 ---------------- */
     /**
-     * 获得保存文件的输出流对象FileOutputStream
+     * 获得读出文件的输入流对象FileInputStream
      *
-     * @param saveFile
+     * @param inputFile
      * @return
      */
-    public static FileOutputStream getFileOutputStream(File saveFile) {
-        FileOutputStream fileOutputStream;
+    public static FileInputStream getFileInputStream(File inputFile) {
+        FileInputStream fileInputStream;
         try {
-            fileOutputStream = new FileOutputStream(saveFile);
+            fileInputStream = new FileInputStream(inputFile);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileOutputStream(saveFile)# java.io.FileNotFoundException", e);
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileInputStream(inputFile)# java.io.FileNotFoundException", e);
+        }
+        return fileInputStream;
+    }
+
+    /**
+     * 获得写入文件的输出流对象FileOutputStream
+     *
+     * @param outputFile
+     * @return
+     */
+    public static FileOutputStream getFileOutputStream(File outputFile) {
+        FileOutputStream fileOutputStream;
+        try {
+            fileOutputStream = new FileOutputStream(outputFile);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileOutputStream(outputFile)# java.io.FileNotFoundException", e);
         }
         return fileOutputStream;
     }
@@ -232,15 +260,15 @@ public class HttpDownloadUtil {
     }
 
     /**
-     * 获得保存文件的随机访问文件对象RandomAccessFile
+     * 获得随机访问文件对象RandomAccessFile
      *
      * @param saveFile
      * @return
      */
-    public static RandomAccessFile getRandomAccessFile(File saveFile) {
+    public static RandomAccessFile getRandomAccessFile(File saveFile, String mode) {
         RandomAccessFile raf;
         try {
-            raf = new RandomAccessFile(saveFile, "rwd");
+            raf = new RandomAccessFile(saveFile, mode);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new RandomAccessFile(saveFile, \"rwd\")# java.io.FileNotFoundException", e);
@@ -250,6 +278,8 @@ public class HttpDownloadUtil {
 
     /**
      * 设置随机访问文件对象RandomAccessFile的文件长度
+     *
+     * 注意：不必一定要用setLength()创建占位文件！///？？？？？？猜想：也许影响速度！
      *
      * @param randomAccessFile
      * @param length
@@ -262,7 +292,6 @@ public class HttpDownloadUtil {
             throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "randomAccessFile.setLength(length)# java.io.IOException", e);
         }
     }
-
 
     /**
      * 随机访问文件对象RandomAccessFile的seek操作
@@ -281,36 +310,111 @@ public class HttpDownloadUtil {
     }
 
     /**
-     * 随机访问文件对象RandomAccessFile的写操作
+     * 随机访问文件对象RandomAccessFile的分段读操作
      *
      * @param randomAccessFile
      * @param bytes
      * @param readLength
      */
-    public static void randomAccessFileWrite(RandomAccessFile randomAccessFile, byte[] bytes, int readLength) {
+    public static void randomAccessFileRead(RandomAccessFile randomAccessFile, byte[] bytes, int readLength) {
         try {
-            randomAccessFile.write(bytes, 0, readLength);
+            randomAccessFile.read(bytes, 0, readLength);
         } catch (IOException e) {
             e.printStackTrace();
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "randomAccessFile.write(bytes, 0, readLength)# java.io.IOException", e);
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "randomAccessFile.read(bytes, 0, readLength)# java.io.IOException", e);
         }
     }
 
     /**
-     * FileChannel的写操作
+     * 随机访问文件对象RandomAccessFile的分段写操作
+     *
+     * @param randomAccessFile
+     * @param bytes
+     * @param writeLength
+     */
+    public static void randomAccessFileWrite(RandomAccessFile randomAccessFile, byte[] bytes, int writeLength) {
+        try {
+            randomAccessFile.write(bytes, 0, writeLength);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "randomAccessFile.write(bytes, 0, writeLength)# java.io.IOException", e);
+        }
+    }
+
+    /**
+     * FileChannel的读操作（ByteBuffer）
      *
      * @param channel
      * @param bytes
      * @param readLength
      */
-    public static void channelWrite(FileChannel channel, byte[] bytes, int readLength) {
-        ///Wrap a byte array into a buffer
-        ByteBuffer buf = ByteBuffer.wrap(bytes, 0, readLength);
+    public static void channelReadByteBuffer(FileChannel channel, byte[] bytes, int readLength) {
+        ByteBuffer buf = wrap(bytes, 0, readLength);
         try {
-            channel.write(buf);
+            channel.read(buf);
         } catch (IOException e) {
             e.printStackTrace();
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "channel.write(buf)# java.io.IOException", e);
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "FileChannel.read(ByteBuffer)# java.io.IOException", e);
+        }
+    }
+
+    /**
+     * FileChannel的写操作（ByteBuffer）
+     *
+     * @param channel
+     * @param bytes
+     * @param writeLength
+     */
+    public static void channelWriteByteBuffer(FileChannel channel, byte[] bytes, int writeLength) {
+        ByteBuffer buffer = wrap(bytes, 0, writeLength);
+        try {
+            channel.write(buffer);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "FileChannel.write(ByteBuffer)# java.io.IOException", e);
+        }
+    }
+
+    ///???????MappedByteBuffer没有调试通过！
+    /**
+     * FileChannel的读操作（MappedByteBuffer）
+     *
+     * Note:  There are some limitation with MappedByteBuffer.
+     * It has size limit 2GB and it can result in page fault if requested page is not in memory.
+     *
+     * @param channel
+     * @param bytes
+     * @param readLength
+     */
+    public static void channelReadMappedByteBuffer(FileChannel channel, byte[] bytes, int readLength) {
+        try {
+            MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, readLength);
+            buffer.get(bytes);
+//            channel.read(buffer);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "FileChannel.read(MappedByteBuffer)# java.io.IOException", e);
+        }
+    }
+
+    /**
+     * FileChannel的写操作（MappedByteBuffer）
+     *
+     * Note:  There are some limitation with MappedByteBuffer.
+     * It has size limit 2GB and it can result in page fault if requested page is not in memory.
+     *
+     * @param channel
+     * @param bytes
+     * @param writeLength
+     */
+    public static void channelWriteMappedByteBuffer(FileChannel channel, byte[] bytes, int writeLength, long start) {
+        try {
+            MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, start, writeLength);
+            buffer.put(bytes);
+//            channel.write(buffer);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "FileChannel.write(MappedByteBuffer)# java.io.IOException", e);
         }
     }
 }

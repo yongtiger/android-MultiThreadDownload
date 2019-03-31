@@ -53,12 +53,6 @@ public enum DownloadState {
     STOPPED,
 
     /**
-     * This state represents a transfer that is currently on hold, waiting for
-     * the network to become available
-     */
-    WAITING_FOR_NETWORK,
-
-    /**
      * This is an internal value used to detect if the current transfer is in an
      * unknown state
      */
