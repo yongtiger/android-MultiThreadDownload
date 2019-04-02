@@ -13,6 +13,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import cc.brainbook.android.multithreaddownload.DownloadTask;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
@@ -251,8 +253,16 @@ public class MainActivity extends AppCompatActivity {
                     ///开启Wifi网络设置页面
 //                startWifiSettingsActivity();
                 } else if (DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION == downloadException.getCode()) {
-                    ///如果下载过程中断开网络连接
+                    ///如果下载过程中断开网络连接，抛出异常DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION
                     Log.d(TAG, "MainActivity# onError()# !!!!!! DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION !!!!!! Message: " + e.getMessage());
+
+                    ///定时轮询，如果网络恢复正常，则重新启动下载任务
+                    new Timer().schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            mDownloadTask.start();
+                        }
+                    }, 3000, 3000);
                 } else {
 
                 }

@@ -50,6 +50,10 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 4）丰富的下载监听器参数
  * 如获取下载进度progress和下载网速speed，获取实时的下载耗时（暂停期间不计！），也可实现分段详细显示下载进度条
  *
+ * 5）可以断网后自动恢复下载
+ * 如果下载过程中断开网络连接，抛出异常DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION
+ * 用户自行编写触发再次连接的代码（比如轮询、或监听网络状态变化）
+ *
  *
  * 使用：
  * 1）创建下载任务类DownloadTask实例，并链式set方法设置参数

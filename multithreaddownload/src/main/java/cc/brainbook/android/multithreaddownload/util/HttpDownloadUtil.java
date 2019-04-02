@@ -163,41 +163,24 @@ public class HttpDownloadUtil {
 
 
     /* ---------------- 文件读写 ---------------- */
-    /**
-     * 获得读出文件的输入流对象FileInputStream
-     *
-     * 注意：当输入流对象为网络连接获得的时候，IOException为断网异常，所以特别用EXCEPTION_NETWORK_FILE_IO_EXCEPTION
-     *
-     * @param inputFile
-     * @return
-     */
-    public static FileInputStream getFileInputStream(File inputFile) {
-        FileInputStream fileInputStream;
-        try {
-            fileInputStream = new FileInputStream(inputFile);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-//            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileInputStream(inputFile)# java.io.FileNotFoundException", e);
-            throw new DownloadException(DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION, "new FileInputStream(inputFile)# java.io.FileNotFoundException", e);
-        }
-        return fileInputStream;
-    }
 
     /**
-     * 获得写入文件的输出流对象FileOutputStream
+     * 获得网络连接的输入流对象InputStream
      *
-     * @param outputFile
+     * @param connection
      * @return
      */
-    public static FileOutputStream getFileOutputStream(File outputFile) {
-        FileOutputStream fileOutputStream;
+    public static InputStream getInputStream(HttpURLConnection connection) {
+        ///获得网络连接connection的输入流对象
+        InputStream inputStream;
         try {
-            fileOutputStream = new FileOutputStream(outputFile);
-        } catch (FileNotFoundException e) {
+            inputStream = connection.getInputStream();
+        } catch (IOException e) {
             e.printStackTrace();
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileOutputStream(outputFile)# java.io.FileNotFoundException", e);
+            throw new DownloadException(DownloadException.EXCEPTION_NETWORK_IO_EXCEPTION, "connection.getInputStream()# java.io.IOException", e);
         }
-        return fileOutputStream;
+
+        return inputStream;
     }
 
     /**
@@ -211,13 +194,8 @@ public class HttpDownloadUtil {
      */
     public static BufferedInputStream getBufferedInputStream(HttpURLConnection connection) {
         ///获得网络连接connection的输入流对象
-        InputStream inputStream;
-        try {
-            inputStream = connection.getInputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new DownloadException(DownloadException.EXCEPTION_NETWORK_IO_EXCEPTION, "connection.getInputStream()# java.io.IOException", e);
-        }
+        InputStream inputStream = getInputStream(connection);
+
         ///由输入流对象创建缓冲输入流对象（比inputStream效率要高）
         return new BufferedInputStream(inputStream);
     }
