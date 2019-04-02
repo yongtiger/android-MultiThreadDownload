@@ -61,6 +61,8 @@ public class HttpDownloadUtil {
         try {
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("Accept-Encoding", "identity");
+            connection.setRequestProperty("Charset", "UTF-8");
+            connection.setRequestProperty("Connection", "Keep-Alive");
         } catch (UnknownHostException e) {
             ///URL虽然以http://或https://开头、但host为空或无效host
             ///     java.net.UnknownHostException: http://

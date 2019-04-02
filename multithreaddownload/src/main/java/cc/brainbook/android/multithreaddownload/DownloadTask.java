@@ -50,7 +50,7 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 4）丰富的下载监听器参数
  * 如获取下载进度progress和下载网速speed，获取实时的下载耗时（暂停期间不计！），也可实现分段详细显示下载进度条
  *
- * 5）使用状态机方式，方便修改状态变化逻辑，比如：
+ * 5）使用Handler状态机方式，方便修改状态变化逻辑，比如：
  *      初始化后可以立即下载
  *      暂停/成功/错误状态时，可以停止下载进行清空数据库下载记录、下载文件等
  *      成功后可以清空后再重新下载

@@ -19,9 +19,6 @@ public class Config {
      */
     public static final int MINIMUM_DOWNLOAD_PART_SIZE = 5 * MB;
 
-    /** Default encoding used for text data */
-    public static final String DEFAULT_ENCODING = "UTF-8";
-
     /**
      * 网络连接超时（缺省为10秒）
      */
