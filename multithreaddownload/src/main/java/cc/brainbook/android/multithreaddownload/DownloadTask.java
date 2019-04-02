@@ -87,10 +87,16 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
 public class DownloadTask {
     private static final String TAG = "TAG";
 
+    ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
+    /**
+     * Lock to synchronize access.
+     */
+    private static final Object LOCK = new Object();
+
     /**
      * 线程池
      */
-    private static ExecutorService sExecutorService = Executors.newCachedThreadPool();
+    private static final ExecutorService sExecutorService = Executors.newCachedThreadPool();
 
     /**
      * 持有Activity的引用
@@ -108,84 +114,6 @@ public class DownloadTask {
     private DownloadHandler mHandler;
     private ThreadInfoDAO mThreadDAO;
     private DownloadListener mDownloadListener;
-
-    ///[FIX#等待所有下载线程全部暂停之后，再暂停，否则会产生内存泄漏！]
-    /**
-     * Lock to synchronize access.
-     */
-    private static final Object LOCK = new Object();
-
-    /**
-     * 定时器
-     */
-    private Handler mTimerHandler;
-    private long currentTimeMillis;
-    private long currentFinishedBytes;
-    private Runnable mTimerRunnable = new Runnable() {
-        @Override
-        public void run() {
-            ///发送消息：更新进度
-            if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 触发定时器 -------");
-
-            long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
-            currentTimeMillis = System.currentTimeMillis();
-            long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
-            currentFinishedBytes = mFileInfo.getFinishedBytes();
-            mHandler.obtainMessage(DownloadHandler.MSG_PROGRESS, new long[]{diffTimeMillis, diffFinishedBytes}).sendToTarget();
-
-            ///累计文件信息的已经完成的总耗时（毫秒）
-            mFileInfo.setFinishedTimeMillis(mFileInfo.getFinishedTimeMillis() + diffTimeMillis);
-
-            ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
-            if (mayStopTimer) {
-                ///停止定时器
-                stopTimer();
-            } else {
-                mTimerHandler.postDelayed(mTimerRunnable, mConfig.progressInterval);
-            }
-        }
-    };
-
-    ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
-    ///分析：下载完成（成功/失败/停止）或暂停到取消定时器期间，应该再运行一次定时任务去更新进度
-    ///解决：加入可以停止定时器的标识mayStopTimer来控制定时器的取消
-    /**
-     * 可以停止定时器的标识
-     */
-    boolean mayStopTimer;
-
-    /**
-     * 启动定时器
-     */
-    void startTimer() {
-        if (DEBUG) Log.d(TAG, "DownloadTask# startTimer()# ------- 启动定时器 -------");
-
-        ///控制更新进度的周期
-        currentTimeMillis = System.currentTimeMillis();
-        currentFinishedBytes = mFileInfo.getFinishedBytes();
-
-        ///设置可以停止定时器的标识为false
-        mayStopTimer = false;
-
-        ///启动定时器Timer
-        if (mTimerHandler == null) {
-            ///https://stackoverflow.com/questions/3875184/cant-create-handler-inside-thread-that-has-not-called-looper-prepare
-            mTimerHandler = new Handler(Looper.getMainLooper());
-        }
-        mTimerHandler.postDelayed(mTimerRunnable, mConfig.progressInterval);
-    }
-
-    /**
-     * 停止定时器
-     */
-    void stopTimer() {
-        if (DEBUG) Log.d(TAG, "DownloadTask# stopTimer()# ------- 停止定时器 -------");
-
-        if (mTimerHandler != null) {
-            mTimerHandler.removeCallbacks(mTimerRunnable);
-            mTimerHandler = null;  ///[FIX BUG# pause后立即start所引起的重复启动问题]解决方法：在运行start()时会同时检测mTimer是否为null的条件
-        }
-    }
 
     /**
      * 线程信息集合
@@ -564,6 +492,78 @@ public class DownloadTask {
             ///线程池
 //            downloadThread.start();
             sExecutorService.execute(downloadThread);
+        }
+    }
+
+    ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
+    ///分析：下载完成（成功/失败/停止）或暂停到取消定时器期间，应该再运行一次定时任务去更新进度
+    ///解决：加入可以停止定时器的标识mayStopTimer来控制定时器的取消
+    /**
+     * 可以停止定时器的标识
+     */
+    boolean mayStopTimer;
+
+    /**
+     * 定时器
+     */
+    private long currentTimeMillis;
+    private long currentFinishedBytes;
+    private Handler mTimerHandler;
+    private Runnable mTimerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            ///发送消息：更新进度
+            if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 触发定时器 -------");
+
+            long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
+            currentTimeMillis = System.currentTimeMillis();
+            long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
+            currentFinishedBytes = mFileInfo.getFinishedBytes();
+            mHandler.obtainMessage(DownloadHandler.MSG_PROGRESS, new long[]{diffTimeMillis, diffFinishedBytes}).sendToTarget();
+
+            ///累计文件信息的已经完成的总耗时（毫秒）
+            mFileInfo.setFinishedTimeMillis(mFileInfo.getFinishedTimeMillis() + diffTimeMillis);
+
+            ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
+            if (mayStopTimer) {
+                ///停止定时器
+                stopTimer();
+            } else {
+                mTimerHandler.postDelayed(mTimerRunnable, mConfig.progressInterval);
+            }
+        }
+    };
+
+    /**
+     * 启动定时器
+     */
+    void startTimer() {
+        if (DEBUG) Log.d(TAG, "DownloadTask# startTimer()# ------- 启动定时器 -------");
+
+        ///控制更新进度的周期
+        currentTimeMillis = System.currentTimeMillis();
+        currentFinishedBytes = mFileInfo.getFinishedBytes();
+
+        ///设置可以停止定时器的标识为false
+        mayStopTimer = false;
+
+        ///启动定时器Timer
+        if (mTimerHandler == null) {
+            ///https://stackoverflow.com/questions/3875184/cant-create-handler-inside-thread-that-has-not-called-looper-prepare
+            mTimerHandler = new Handler(Looper.getMainLooper());
+        }
+        mTimerHandler.postDelayed(mTimerRunnable, mConfig.progressInterval);
+    }
+
+    /**
+     * 停止定时器
+     */
+    void stopTimer() {
+        if (DEBUG) Log.d(TAG, "DownloadTask# stopTimer()# ------- 停止定时器 -------");
+
+        if (mTimerHandler != null) {
+            mTimerHandler.removeCallbacks(mTimerRunnable);
+            mTimerHandler = null;  ///[FIX BUG# pause后立即start所引起的重复启动问题]解决方法：在运行start()时会同时检测mTimer是否为null的条件
         }
     }
 

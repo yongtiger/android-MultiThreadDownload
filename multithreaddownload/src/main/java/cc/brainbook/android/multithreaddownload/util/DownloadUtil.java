@@ -2,9 +2,12 @@ package cc.brainbook.android.multithreaddownload.util;
 
 import java.io.File;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 import java.util.List;
 
+import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
+import cc.brainbook.android.multithreaddownload.db.ThreadInfoDAO;
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.exception.DownloadException;
 
@@ -91,6 +94,56 @@ public class DownloadUtil {
         }
 
         return state;
+    }
+
+    /**
+     * 根据线程数量创建线程信息，并添加到线程信息集合中
+     *
+     * @param fileInfo
+     * @param threadCount
+     * @param threadInfoDAO
+     * @return
+     */
+    public static List<ThreadInfo> createToThreadInfos(FileInfo fileInfo, int threadCount, ThreadInfoDAO threadInfoDAO) {
+        List<ThreadInfo> threadInfos = new ArrayList<>();
+
+        ///获得每个线程的长度
+        long length = fileInfo.getFileSize() / threadCount;
+
+        ///遍历每个线程
+        for (int i = 0; i < threadCount; i++) {
+            ///创建线程信息
+            ThreadInfo threadInfo = new ThreadInfo (
+                    DownloadState.NEW,
+                    0,
+                    0,
+                    System.currentTimeMillis(),
+                    System.currentTimeMillis(),
+                    0,
+                    i * length,
+                    (i + 1) * length - 1,
+                    fileInfo.getFileUrl(),
+                    fileInfo.getFileName(),
+                    fileInfo.getFileSize(),
+                    fileInfo.getSavePath());
+
+            ///处理最后一个线程（可能存在除不尽的情况）
+            if (i == threadCount - 1) {
+                threadInfo.setEnd(fileInfo.getFileSize() - 1);
+            }
+
+            ///设置线程信息的状态为初始化
+            threadInfo.setState(DownloadState.INITIALIZED);
+
+            ///向数据库插入线程信息
+            long threadId = threadInfoDAO.saveThreadInfo(threadInfo, System.currentTimeMillis(), System.currentTimeMillis());
+            threadInfo.setId(threadId);
+
+            ///添加到线程信息集合中
+            threadInfos.add(threadInfo);
+        }
+
+        return threadInfos;
     }
 
 }

@@ -4,6 +4,9 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
@@ -118,7 +121,7 @@ public class DownloadHandler extends Handler {
                         mFileInfo.getSavePath());
 
                 ///根据线程数量创建线程信息，并添加到线程信息集合中
-                createToThreadInfos(mConfig.threadCount);
+                mDownloadTask.mThreadInfos = DownloadUtil.createToThreadInfos(mFileInfo, mConfig.threadCount, mThreadDAO);
 
                 ///更改状态为初始化完成（INITIALIZED）
                 changeStateToInitialized();
@@ -326,49 +329,6 @@ public class DownloadHandler extends Handler {
         ///状态变化的回调接口：下载失败（DOWNLOAD_FAILED）
         if (mDownloadListener != null) {
             mDownloadListener.onStateChanged(mFileInfo, mDownloadTask.mThreadInfos, DownloadState.DOWNLOAD_FAILED);
-        }
-    }
-
-    /**
-     * 根据线程数量创建线程信息，并添加到线程信息集合中
-     *
-     * @param threadCount
-     */
-    private void createToThreadInfos(int threadCount) {
-        ///获得每个线程的长度
-        long length = mFileInfo.getFileSize() / threadCount;
-
-        ///遍历每个线程
-        for (int i = 0; i < threadCount; i++) {
-            ///创建线程信息
-            ThreadInfo threadInfo = new ThreadInfo (
-                    DownloadState.NEW,
-                    0,
-                    0,
-                    System.currentTimeMillis(),
-                    System.currentTimeMillis(),
-                    0,
-                    i * length,
-                    (i + 1) * length - 1,
-                    mFileInfo.getFileUrl(),
-                    mFileInfo.getFileName(),
-                    mFileInfo.getFileSize(),
-                    mFileInfo.getSavePath());
-
-            ///处理最后一个线程（可能存在除不尽的情况）
-            if (i == threadCount - 1) {
-                threadInfo.setEnd(mFileInfo.getFileSize() - 1);
-            }
-
-            ///设置线程信息的状态为初始化
-            threadInfo.setState(DownloadState.INITIALIZED);
-
-            ///向数据库插入线程信息
-            long threadId = mThreadDAO.saveThreadInfo(threadInfo, System.currentTimeMillis(), System.currentTimeMillis());
-            threadInfo.setId(threadId);
-
-            ///添加到线程信息集合中
-            mDownloadTask.mThreadInfos.add(threadInfo);
         }
     }
 
