@@ -250,6 +250,9 @@ public class MainActivity extends AppCompatActivity {
 
                     ///开启Wifi网络设置页面
 //                startWifiSettingsActivity();
+                } else if (DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION == downloadException.getCode()) {
+                    ///如果下载过程中断开网络连接
+                    Log.d(TAG, "MainActivity# onError()# !!!!!! DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION !!!!!! Message: " + e.getMessage());
                 } else {
 
                 }

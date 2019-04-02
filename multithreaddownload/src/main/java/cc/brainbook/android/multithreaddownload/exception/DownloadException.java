@@ -16,9 +16,10 @@ public class DownloadException extends RuntimeException {
     public static final int EXCEPTION_NETWORK_MALFORMED_URL = 6;
     public static final int EXCEPTION_NETWORK_UNKNOWN_HOST = 7;
     public static final int EXCEPTION_NETWORK_IO_EXCEPTION = 8;
-    public static final int EXCEPTION_NETWORK_PROTOCOL_EXCEPTION = 9;
-    public static final int EXCEPTION_NETWORK_RESPONSE_CODE_EXCEPTION = 10;
-    public static final int EXCEPTION_SAVE_PATH_MKDIR = 11;
+    public static final int EXCEPTION_NETWORK_FILE_IO_EXCEPTION = 9;
+    public static final int EXCEPTION_NETWORK_PROTOCOL_EXCEPTION = 10;
+    public static final int EXCEPTION_NETWORK_RESPONSE_CODE_EXCEPTION = 11;
+    public static final int EXCEPTION_SAVE_PATH_MKDIR = 12;
 
     private int code;
 
@@ -62,6 +63,7 @@ public class DownloadException extends RuntimeException {
             EXCEPTION_NETWORK_MALFORMED_URL,
             EXCEPTION_NETWORK_UNKNOWN_HOST,
             EXCEPTION_NETWORK_IO_EXCEPTION,
+            EXCEPTION_NETWORK_FILE_IO_EXCEPTION,
             EXCEPTION_NETWORK_PROTOCOL_EXCEPTION,
             EXCEPTION_NETWORK_RESPONSE_CODE_EXCEPTION,
             EXCEPTION_SAVE_PATH_MKDIR,

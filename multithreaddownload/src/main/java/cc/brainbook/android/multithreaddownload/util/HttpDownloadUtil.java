@@ -166,6 +166,8 @@ public class HttpDownloadUtil {
     /**
      * 获得读出文件的输入流对象FileInputStream
      *
+     * 注意：当输入流对象为网络连接获得的时候，IOException为断网异常，所以特别用EXCEPTION_NETWORK_FILE_IO_EXCEPTION
+     *
      * @param inputFile
      * @return
      */
@@ -175,7 +177,8 @@ public class HttpDownloadUtil {
             fileInputStream = new FileInputStream(inputFile);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileInputStream(inputFile)# java.io.FileNotFoundException", e);
+//            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileInputStream(inputFile)# java.io.FileNotFoundException", e);
+            throw new DownloadException(DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION, "new FileInputStream(inputFile)# java.io.FileNotFoundException", e);
         }
         return fileInputStream;
     }
@@ -225,6 +228,8 @@ public class HttpDownloadUtil {
      * 注意：缓冲输入流比inputStream效率要高
      * https://blog.csdn.net/hfreeman2008/article/details/49174499
      *
+     * 注意：当输入流对象为网络连接获得的时候，IOException为断网异常，所以特别用EXCEPTION_NETWORK_FILE_IO_EXCEPTION
+     *
      * @param bufferedInputStream
      * @param bytes
      * @return
@@ -235,7 +240,8 @@ public class HttpDownloadUtil {
             result = bufferedInputStream.read(bytes);
         } catch (IOException e) {
             e.printStackTrace();
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "bufferedInputStream.read(bytes)# java.io.IOException", e);
+//            throw new DownloadException(DownloadException.EXCEPTION_FILE_IO_EXCEPTION, "bufferedInputStream.read(bytes)# java.io.IOException", e);
+            throw new DownloadException(DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION, "bufferedInputStream.read(bytes)# java.io.IOException", e);
         }
         return result;
     }
@@ -279,7 +285,7 @@ public class HttpDownloadUtil {
     /**
      * 设置随机访问文件对象RandomAccessFile的文件长度
      *
-     * 注意：不必一定要用setLength()创建占位文件！///？？？？？？猜想：也许影响速度！
+     * 注意：不必一定要用setLength()创建占位文件！///??????猜想：也许影响速度！
      *
      * @param randomAccessFile
      * @param length
