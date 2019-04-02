@@ -24,7 +24,7 @@ public interface DownloadListener {
     /**
      * 进度的监听回调方法
      *
-     * @param fileInfo              文件信息，比如用fileInfo.getFinishedTimeMillis()获取实时的耗时（暂停期间不计！）
+     * @param fileInfo              文件信息，比如用fileInfo.getFinishedTimeMillis()获取实时的耗时
      * @param threadInfos           线程信息（比如，可实现分段详细显示下载进度条）
      * @param diffTimeMillis        配合文件信息获取下载网速speed
      * @param diffFinishedBytes     配合文件信息获取下载进度progress
