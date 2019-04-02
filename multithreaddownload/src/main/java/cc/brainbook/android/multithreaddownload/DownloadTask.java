@@ -1,14 +1,14 @@
 package cc.brainbook.android.multithreaddownload;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -118,7 +118,33 @@ public class DownloadTask {
     /**
      * 定时器
      */
-    private Timer mTimer;
+    private Handler mTimerHandler;
+    private long currentTimeMillis;
+    private long currentFinishedBytes;
+    private Runnable mTimerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            ///发送消息：更新进度
+            if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 触发定时器 -------");
+
+            long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
+            currentTimeMillis = System.currentTimeMillis();
+            long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
+            currentFinishedBytes = mFileInfo.getFinishedBytes();
+            mHandler.obtainMessage(DownloadHandler.MSG_PROGRESS, new long[]{diffTimeMillis, diffFinishedBytes}).sendToTarget();
+
+            ///累计文件信息的已经完成的总耗时（毫秒）
+            mFileInfo.setFinishedTimeMillis(mFileInfo.getFinishedTimeMillis() + diffTimeMillis);
+
+            ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
+            if (mayStopTimer) {
+                ///停止定时器
+                stopTimer();
+            } else {
+                mTimerHandler.postDelayed(mTimerRunnable, mConfig.progressInterval);
+            }
+        }
+    };
 
     ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
     ///分析：下载完成（成功/失败/停止）或暂停到取消定时器期间，应该再运行一次定时任务去更新进度
@@ -129,11 +155,11 @@ public class DownloadTask {
     boolean mayStopTimer;
 
     /**
-     * 启动定时器、更新进度
+     * 启动定时器
      */
-    private long currentTimeMillis;
-    private long currentFinishedBytes;
-    private void startTimer() {
+    void startTimer() {
+        if (DEBUG) Log.d(TAG, "DownloadTask# startTimer()# ------- 启动定时器 -------");
+
         ///控制更新进度的周期
         currentTimeMillis = System.currentTimeMillis();
         currentFinishedBytes = mFileInfo.getFinishedBytes();
@@ -142,29 +168,11 @@ public class DownloadTask {
         mayStopTimer = false;
 
         ///启动定时器Timer
-        mTimer = new Timer();
-        mTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                ///发送消息：更新进度
-                if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 触发定时器 -------");
-
-                long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
-                currentTimeMillis = System.currentTimeMillis();
-                long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
-                currentFinishedBytes = mFileInfo.getFinishedBytes();
-                mHandler.obtainMessage(DownloadHandler.MSG_PROGRESS, new long[]{diffTimeMillis, diffFinishedBytes}).sendToTarget();
-
-                ///累计文件信息的已经完成的总耗时（毫秒）
-                mFileInfo.setFinishedTimeMillis(mFileInfo.getFinishedTimeMillis() + diffTimeMillis);
-
-                ///[FIX BUG# 下载完成（成功/失败/停止）或暂停后取消定时器，进度更新显示99%]
-                if (mayStopTimer) {
-                    ///停止定时器
-                    stopTimer();
-                }
-            }
-        }, Config.progressDelay, mConfig.progressInterval);
+        if (mTimerHandler == null) {
+            ///https://stackoverflow.com/questions/3875184/cant-create-handler-inside-thread-that-has-not-called-looper-prepare
+            mTimerHandler = new Handler(Looper.getMainLooper());
+        }
+        mTimerHandler.postDelayed(mTimerRunnable, mConfig.progressInterval);
     }
 
     /**
@@ -173,9 +181,9 @@ public class DownloadTask {
     void stopTimer() {
         if (DEBUG) Log.d(TAG, "DownloadTask# stopTimer()# ------- 停止定时器 -------");
 
-        if (mTimer != null) {
-            mTimer.cancel();
-            mTimer = null;  ///[FIX BUG# pause后立即start所引起的重复启动问题]解决方法：在运行start()时会同时检测mTimer是否为null的条件
+        if (mTimerHandler != null) {
+            mTimerHandler.removeCallbacks(mTimerRunnable);
+            mTimerHandler = null;  ///[FIX BUG# pause后立即start所引起的重复启动问题]解决方法：在运行start()时会同时检测mTimer是否为null的条件
         }
     }
 
@@ -349,7 +357,7 @@ public class DownloadTask {
                 break;
             case PAUSED:        ///下载暂停（PAUSED）后开始下载start()
                 ///[FIX BUG#pause后立即start所引起的重复启动问题]运行start()时会同时检测mTimer是否为null的条件
-                if (mTimer != null) {
+                if (mTimerHandler != null) {
                     return;
                 }
 

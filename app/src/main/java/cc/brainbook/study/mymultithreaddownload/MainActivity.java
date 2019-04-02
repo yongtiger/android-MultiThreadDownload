@@ -279,6 +279,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     public boolean isWifiConnected(Context context) {
         if (context != null) {
             ConnectivityManager mConnectivityManager = (ConnectivityManager) context

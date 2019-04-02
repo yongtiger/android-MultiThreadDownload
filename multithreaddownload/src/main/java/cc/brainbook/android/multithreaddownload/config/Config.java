@@ -44,9 +44,8 @@ public class Config {
     public int threadCount = 1;
 
     /**
-     * 下载进度的更新周期（缺省为1秒）、定时器延时
+     * 下载进度的更新周期（缺省为1秒）
      */
     public int progressInterval = 1000;
-    public static final long progressDelay = 1000;
 
 }
