@@ -1,7 +1,10 @@
 package cc.brainbook.study.mymultithreaddownload;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
@@ -257,10 +260,17 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "MainActivity# onError()# !!!!!! DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION !!!!!! Message: " + e.getMessage());
 
                     ///定时轮询，如果网络恢复正常，则重新启动下载任务
-                    new Timer().schedule(new TimerTask() {
+                    final Timer timer = new Timer();
+                    timer.schedule(new TimerTask() {
                         @Override
                         public void run() {
-                            mDownloadTask.start();
+                            Log.d(TAG, "run: !!!!!! 定时轮询、监听网络状态变化 !!!!!! ");
+                            if (isWifiConnected(MainActivity.this)) {
+                                Log.d(TAG, "run: !!!!!! 网络恢复正常 !!!!!! ");
+                                timer.cancel();
+                                mDownloadTask.start();
+                            }
+
                         }
                     }, 3000, 3000);
                 } else {
@@ -268,5 +278,17 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+    }
+    public boolean isWifiConnected(Context context) {
+        if (context != null) {
+            ConnectivityManager mConnectivityManager = (ConnectivityManager) context
+                    .getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo mWiFiNetworkInfo = mConnectivityManager
+                    .getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+            if (mWiFiNetworkInfo != null) {
+                return mWiFiNetworkInfo.isConnected();
+            }
+        }
+        return false;
     }
 }
