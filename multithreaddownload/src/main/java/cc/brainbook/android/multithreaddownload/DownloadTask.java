@@ -37,7 +37,7 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 则创建一个新线程并添加到池中，如果有线程可用，则复用现有的线程。如果60 秒钟未被使用的线程则会被回收。
  * 因此，长时间保持空闲的线程池不会使用任何内存资源。
  * 用户可通过DownloadTask#setThreadCount(int threadCount)设置，设置下载线程数量以后，系统会优化调整最终获得的下载线程数量
- * 以保证每个线程下载的文件长度不少于MINIMUM_DOWNLOAD_PART_SIZE（5MB），极端情况下，如果文件总长度小于5MB，则只分配一个线程///??????
+ * 以保证每个线程下载的文件长度不少于MINIMUM_DOWNLOAD_PART_SIZE（5MB），极端情况下，如果文件总长度小于5MB，则只分配一个线程
  * 注意：建议不要太大，取值范围不超过50！否则系统可能不再分配线程，造成其余下载线程仍处于初始化状态而不能进入运行状态
  *
  * 2）断点续传
@@ -48,7 +48,7 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 3）链式set方法设置
  *
  * 4）丰富的下载监听器参数
- * 如获取下载进度progress和下载网速speed，获取实时的下载耗时（暂停期间不计！），也可实现分段详细显示下载进度条
+ * 如获取下载进度progress和下载网速speed，获取实时的下载耗时，也可实现分段详细显示下载进度条
  *
  * 5）使用Handler状态机方式，方便修改状态变化逻辑，比如：
  *      初始化后可以立即下载
