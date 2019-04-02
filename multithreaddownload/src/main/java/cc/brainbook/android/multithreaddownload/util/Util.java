@@ -40,7 +40,7 @@ public class Util {
      */
     public static File getDefaultFilesDir(Context context) {
         ///https://juejin.im/entry/5951d0096fb9a06bb8745f75
-        File downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        final File downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
         if (downloadDir != null) {
             return downloadDir;
         } else {

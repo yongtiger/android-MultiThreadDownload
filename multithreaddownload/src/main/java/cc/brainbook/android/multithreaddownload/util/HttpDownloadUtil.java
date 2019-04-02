@@ -136,7 +136,7 @@ public class HttpDownloadUtil {
         String filename = "";
         if (connection == null) return filename;
 
-        String disposition = connection.getHeaderField("Content-Disposition");
+        final String disposition = connection.getHeaderField("Content-Disposition");
         if (disposition != null) {
             // extracts file name from header field
             int index = disposition.indexOf("filename=");
@@ -146,7 +146,7 @@ public class HttpDownloadUtil {
             }
         }
         if (filename.length() == 0) {
-            URL url = connection.getURL();
+            final URL url = connection.getURL();
             String path = "";
             if (url != null) {
                 path = url.getPath();
@@ -194,7 +194,7 @@ public class HttpDownloadUtil {
      */
     public static BufferedInputStream getBufferedInputStream(HttpURLConnection connection) {
         ///获得网络连接connection的输入流对象
-        InputStream inputStream = getInputStream(connection);
+        final InputStream inputStream = getInputStream(connection);
 
         ///由输入流对象创建缓冲输入流对象（比inputStream效率要高）
         return new BufferedInputStream(inputStream);
@@ -333,7 +333,7 @@ public class HttpDownloadUtil {
      * @param readLength
      */
     public static void channelReadByteBuffer(FileChannel channel, byte[] bytes, int readLength) {
-        ByteBuffer buf = wrap(bytes, 0, readLength);
+        final ByteBuffer buf = wrap(bytes, 0, readLength);
         try {
             channel.read(buf);
         } catch (IOException e) {
@@ -350,7 +350,7 @@ public class HttpDownloadUtil {
      * @param writeLength
      */
     public static void channelWriteByteBuffer(FileChannel channel, byte[] bytes, int writeLength) {
-        ByteBuffer buffer = wrap(bytes, 0, writeLength);
+        final ByteBuffer buffer = wrap(bytes, 0, writeLength);
         try {
             channel.write(buffer);
         } catch (IOException e) {
@@ -372,7 +372,7 @@ public class HttpDownloadUtil {
      */
     public static void channelReadMappedByteBuffer(FileChannel channel, byte[] bytes, int readLength) {
         try {
-            MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, readLength);
+            final MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, readLength);
             buffer.get(bytes);
 //            channel.read(buffer);
         } catch (IOException e) {
@@ -393,7 +393,7 @@ public class HttpDownloadUtil {
      */
     public static void channelWriteMappedByteBuffer(FileChannel channel, byte[] bytes, int writeLength, long start) {
         try {
-            MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, start, writeLength);
+            final MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, start, writeLength);
             buffer.put(bytes);
 //            channel.write(buffer);
         } catch (IOException e) {

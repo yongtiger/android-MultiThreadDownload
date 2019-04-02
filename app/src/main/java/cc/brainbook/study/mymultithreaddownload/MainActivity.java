@@ -29,12 +29,6 @@ import cc.brainbook.android.multithreaddownload.listener.DownloadListener;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "TAG";
 
-    /**
-     * 下载文件保存目录（可选）
-     *
-     * 默认为系统SD卡的下载目录context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)。参考：Util.getDefaultFilesDir(Context context)
-     * 用户可通过DownloadTask#setSavePath(String savePath)设置
-     */
     public static final String DOWNLOAD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Downloads/";
 
     public TextView mTextView;
@@ -52,8 +46,7 @@ public class MainActivity extends AppCompatActivity {
         mTextView = findViewById(R.id.tvTextView);
 
         ///Android 6.0以上版本必须动态设置权限
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
@@ -66,8 +59,7 @@ public class MainActivity extends AppCompatActivity {
 
     ///https://developer.android.com/training/permissions/requesting?hl=zh-cn#handle-response
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
             case 1: {
                 // If request is cancelled, the result arrays are empty.
@@ -96,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         Log.d(TAG, "============== MainActivity# onDestroy()# ==============");
 
-        ///Activity退出后应调用下载暂停来保存下载文件信息（即断点）到数据库
+        ///Activity关闭后应调用下载暂停来保存下载文件信息（即断点）到数据库
         pauseDownload(mDownloadTask);
 
         ///避免内存泄漏

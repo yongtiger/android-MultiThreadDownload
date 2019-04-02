@@ -22,11 +22,11 @@ public class ThreadInfoDAOImpl implements ThreadInfoDAO {
     public synchronized long saveThreadInfo(ThreadInfo threadInfo,
                                             long created_time_millis,
                                             long updated_time_millis) {
-        SQLiteDatabase db = mHelper.getWritableDatabase();
+        final SQLiteDatabase db = mHelper.getWritableDatabase();
 
         ///https://developer.android.com/training/data-storage/sqlite#WriteDbRow
         ///Create a new map of values, where column names are the keys
-        ContentValues values = new ContentValues();
+        final ContentValues values = new ContentValues();
         values.put("state", threadInfo.getState().toString());
         values.put("finished_bytes", threadInfo.getFinishedBytes());
         values.put("finished_time_millis", threadInfo.getFinishedTimeMillis());
@@ -40,7 +40,7 @@ public class ThreadInfoDAOImpl implements ThreadInfoDAO {
         values.put("save_path", threadInfo.getSavePath());
 
         ///Insert the new row, returning the primary key value of the new row
-        long newRowId = db.insert("thread_info", null, values);
+        final long newRowId = db.insert("thread_info", null, values);
 
         db.close();
         return newRowId;
@@ -52,21 +52,21 @@ public class ThreadInfoDAOImpl implements ThreadInfoDAO {
                                              long finishedBytes,
                                              long finishedTimeMillis,
                                              long updatedTimeMillis) {
-        SQLiteDatabase db = mHelper.getWritableDatabase();
+        final SQLiteDatabase db = mHelper.getWritableDatabase();
 
         ///https://developer.android.com/training/data-storage/sqlite#UpdateDbRow
         ///New value for one column
-        ContentValues values = new ContentValues();
+        final ContentValues values = new ContentValues();
         values.put("state", state.toString());
         values.put("finished_bytes", finishedBytes);
         values.put("finished_time_millis", finishedTimeMillis);
         values.put("updated_time_millis", updatedTimeMillis);
 
         ///Which row to update, based on the title
-        String selection = "_id=?";
-        String[] selectionArgs = {thread_id+""};
+        final String selection = "_id=?";
+        final String[] selectionArgs = {thread_id+""};
 
-        int count = db.update(
+        final int count = db.update(
                 "thread_info",
                 values,
                 selection,
@@ -81,15 +81,15 @@ public class ThreadInfoDAOImpl implements ThreadInfoDAO {
                                                  String fileName,
                                                  long fileSize,
                                                  String savePath) {
-        SQLiteDatabase db = mHelper.getWritableDatabase();
+        final SQLiteDatabase db = mHelper.getWritableDatabase();
 
         ///https://developer.android.com/training/data-storage/sqlite#DeleteDbRow
         ///Define 'where' part of query.
-        String selection = "file_url=? and file_name=? and file_size=? and save_path=?";
+        final String selection = "file_url=? and file_name=? and file_size=? and save_path=?";
         ///Specify arguments in placeholder order.
-        String[] selectionArgs = {fileUrl, fileName, fileSize+"", savePath};
+        final String[] selectionArgs = {fileUrl, fileName, fileSize+"", savePath};
         ///Issue SQL statement.
-        int deletedRows = db.delete("thread_info", selection, selectionArgs);
+        final int deletedRows = db.delete("thread_info", selection, selectionArgs);
 
         db.close();
         return deletedRows;
@@ -100,12 +100,12 @@ public class ThreadInfoDAOImpl implements ThreadInfoDAO {
                                                              String fileName,
                                                              long fileSize,
                                                              String savePath) {
-        List<ThreadInfo> list = new ArrayList<>();
-        SQLiteDatabase db = mHelper.getReadableDatabase();
-        Cursor cursor = db.rawQuery("select * from thread_info where file_url=? and file_name=? and file_size=? and save_path=?",
+        final List<ThreadInfo> list = new ArrayList<>();
+        final SQLiteDatabase db = mHelper.getReadableDatabase();
+        final Cursor cursor = db.rawQuery("select * from thread_info where file_url=? and file_name=? and file_size=? and save_path=?",
                 new String[]{fileUrl, fileName, fileSize+"", savePath});
         while (cursor.moveToNext()) {
-            ThreadInfo threadInfo = new ThreadInfo();
+            final ThreadInfo threadInfo = new ThreadInfo();
 
             threadInfo.setState(DownloadState.getState(cursor.getString(cursor.getColumnIndex("state"))));
             threadInfo.setFinishedBytes(cursor.getLong(cursor.getColumnIndex("finished_bytes")));
@@ -127,8 +127,8 @@ public class ThreadInfoDAOImpl implements ThreadInfoDAO {
 
     @Override
     public boolean isExists(long thread_id) {
-        SQLiteDatabase db = mHelper.getReadableDatabase();
-        Cursor cursor = db.rawQuery("select * from thread_info where _id=?",
+        final SQLiteDatabase db = mHelper.getReadableDatabase();
+        final Cursor cursor = db.rawQuery("select * from thread_info where _id=?",
                 new String[]{thread_id+""});
         boolean exist = cursor.moveToNext();
         cursor.close();

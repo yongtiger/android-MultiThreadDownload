@@ -50,13 +50,21 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 4）丰富的下载监听器参数
  * 如获取下载进度progress和下载网速speed，获取实时的下载耗时（暂停期间不计！），也可实现分段详细显示下载进度条
  *
- * 5）可以断网后自动恢复下载
+ * 5）使用状态机方式，方便修改状态变化逻辑，比如：
+ *      初始化后可以立即下载
+ *      暂停/成功/错误状态时，可以停止下载进行清空数据库下载记录、下载文件等
+ *      成功后可以清空后再重新下载
+ *      。。。
+ *
+ * 6）可以断网后自动恢复下载
  * 如果下载过程中断开网络连接，抛出异常DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION
  * 用户自行编写触发再次连接的代码（比如轮询、或监听网络状态变化）
  *
- * 6）采用相比其它定时器（Timer、Handler+Thread）高效的Handler+Runnable实现定时查询和更新下载进度
+ * 7）采用相比其它定时器（Timer、Handler+Thread）高效的Handler+Runnable实现定时查询和更新下载进度
  *
- * 7）优化了每个线程的长度至少为MINIMUM_DOWNLOAD_PART_SIZE，最多下载线程数量为MAXIMUM_DOWNLOAD_PARTS
+ * 8）优化了每个线程的长度至少为MINIMUM_DOWNLOAD_PART_SIZE，最多下载线程数量为MAXIMUM_DOWNLOAD_PARTS
+ *
+ * 9）消除了内存泄漏
  *
  *
  * 使用：
@@ -73,6 +81,8 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 默认为应用的外部下载目录context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)，如果系统无SD卡返回应用的文件目录getFilesDir()
  * 参考：Util.getDefaultFilesDir(Context context)
  * 可通过DownloadTask#setSavePath(String savePath)设置
+ * 1.5）初始化（必须）
+ * 可选择是否初始化后立即下载
  *
  * 2）设置进度监听（可选）
  * fileInfo用于获取下载进度progress和下载网速speed
@@ -216,10 +226,10 @@ public class DownloadTask {
         }
 
         ///检查下载文件的文件名和大小
-        ///如果下载文件没有文件名或文件大小，则启动初始化线程由网络连接获得文件名和文件大小
+        ///仅当下载文件没有文件名或文件大小，才启动初始化线程由网络连接获得文件名和文件大小
         if (TextUtils.isEmpty(mFileInfo.getFileName()) || mFileInfo.getFileSize() <= 0) {
             ///启动初始化线程
-            InitThread initThread = new InitThread (
+            final InitThread initThread = new InitThread (
                     mConfig,
                     mFileInfo,
                     mHandler,
@@ -328,9 +338,6 @@ public class DownloadTask {
 
                 break;
             case DOWNLOAD_FAILED:        ///下载失败（DOWNLOAD_FAILED）后开始下载start()
-                ///同步发送消息：初始化
-//                mHandler.handleMessage(mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED));
-
                 ///执行下载过程
                 innerStart();
 
@@ -457,7 +464,7 @@ public class DownloadTask {
         ///[FIX BUG: 完成（成功/失败/停止）暂停后出现多次重复的消息通知！]
         ///[CyclicBarrier]实现让一组线程等待至某个状态之后再全部同时执行
         ///https://www.cnblogs.com/dolphin0520/p/3920397.html
-        CyclicBarrier barrier = new CyclicBarrier(unCompleteThreadInfos.size(), new Runnable() {
+        final CyclicBarrier barrier = new CyclicBarrier(unCompleteThreadInfos.size(), new Runnable() {
             @Override
             public void run() {
                 ///遍历所有线程信息，如果存在停止状态，则说明文件信息的状态是停止状态
@@ -485,7 +492,7 @@ public class DownloadTask {
 
         ///遍历所有暂停的线程信息集合，逐个启动线程
         for (ThreadInfo threadInfo : unCompleteThreadInfos) {
-            DownloadThread downloadThread = new DownloadThread (
+            final DownloadThread downloadThread = new DownloadThread (
                     mConfig,
                     mFileInfo,
                     mHandler,
@@ -519,9 +526,9 @@ public class DownloadTask {
             ///发送消息：更新进度
             if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 触发定时器 -------");
 
-            long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
+            final long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
             currentTimeMillis = System.currentTimeMillis();
-            long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
+            final long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数
             currentFinishedBytes = mFileInfo.getFinishedBytes();
             mHandler.obtainMessage(DownloadHandler.MSG_PROGRESS, new long[]{diffTimeMillis, diffFinishedBytes}).sendToTarget();
 

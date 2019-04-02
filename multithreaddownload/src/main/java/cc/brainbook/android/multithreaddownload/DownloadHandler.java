@@ -56,8 +56,8 @@ public class DownloadHandler extends Handler {
                 ///更新进度
                 if (mDownloadListener != null) {
                     if (mFileInfo.getState() == DownloadState.STARTED) {
-                        long diffTimeMillis = ((long[]) msg.obj)[0];
-                        long diffFinishedBytes = ((long[]) msg.obj)[1];
+                        final long diffTimeMillis = ((long[]) msg.obj)[0];
+                        final long diffFinishedBytes = ((long[]) msg.obj)[1];
                         mDownloadListener.onProgress(mFileInfo, mDownloadTask.mThreadInfos, diffTimeMillis, diffFinishedBytes);
                     } else {
                         ///修正进度更新显示的下载速度为0

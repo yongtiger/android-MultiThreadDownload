@@ -59,8 +59,8 @@ public class DownloadThread extends Thread {
             connection = HttpDownloadUtil.openConnection(mFileInfo.getFileUrl(), mConfig.connectTimeout);
 
             ///获得下载文件的开始位置
-            long start = mThreadInfo.getStart() + mThreadInfo.getFinishedBytes();
-            long end = mThreadInfo.getEnd();
+            final long start = mThreadInfo.getStart() + mThreadInfo.getFinishedBytes();
+            final long end = mThreadInfo.getEnd();
             ///设置连接的下载范围
             connection.setRequestProperty("range", "bytes="+ start + "-" + end);
 
@@ -74,7 +74,7 @@ public class DownloadThread extends Thread {
             bufferedInputStream = HttpDownloadUtil.getBufferedInputStream(connection);
 
             ///获得保存文件对象
-            File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
+            final File saveFile = new File(mFileInfo.getSavePath(), mFileInfo.getFileName());
             ///获得保存文件的随机访问文件对象RandomAccessFile，并定位
             randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile, "rwd");
             HttpDownloadUtil.randomAccessFileSeek(randomAccessFile, start);
@@ -94,7 +94,7 @@ public class DownloadThread extends Thread {
             ///BufferedInputStream的默认缓冲区大小是8192字节。
             ///当每次读取数据量接近或远超这个值时，两者效率就没有明显差别了
             ///https://blog.csdn.net/xisuo002/article/details/78742631
-            byte[] bytes = new byte[mConfig.bufferSize];
+            final byte[] bytes = new byte[mConfig.bufferSize];
             ///每次循环读取的内容长度，如为-1表示输入流已经读取结束
             int readLength;
             while ((readLength = HttpDownloadUtil.bufferedInputStreamRead(bufferedInputStream, bytes)) != -1) {

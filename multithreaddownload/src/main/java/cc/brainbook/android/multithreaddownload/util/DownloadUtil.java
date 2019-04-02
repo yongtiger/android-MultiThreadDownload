@@ -25,7 +25,7 @@ public class DownloadUtil {
      */
     public static void createEmptySaveFile(String savePath, String fileName, long fileSize) {
         ///获得保存文件
-        File saveFile = new File(savePath, fileName);
+        final File saveFile = new File(savePath, fileName);
 
         ///如果保存文件存在则删除
         if (saveFile.exists()) {
@@ -108,7 +108,7 @@ public class DownloadUtil {
      * @return
      */
     public static List<ThreadInfo> createToThreadInfos(FileInfo fileInfo, int threadCount, ThreadInfoDAO threadInfoDAO) {
-        List<ThreadInfo> threadInfos = new ArrayList<>();
+        final List<ThreadInfo> threadInfos = new ArrayList<>();
 
         ///获得每个线程的长度
         final long length = fileInfo.getFileSize() / threadCount;
