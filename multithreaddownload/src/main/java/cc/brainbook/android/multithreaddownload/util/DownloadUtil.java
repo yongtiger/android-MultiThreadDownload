@@ -7,6 +7,7 @@ import java.util.List;
 
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
+import cc.brainbook.android.multithreaddownload.config.Config;
 import cc.brainbook.android.multithreaddownload.db.ThreadInfoDAO;
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
 import cc.brainbook.android.multithreaddownload.exception.DownloadException;
@@ -99,6 +100,8 @@ public class DownloadUtil {
     /**
      * 根据线程数量创建线程信息，并添加到线程信息集合中
      *
+     * 优化了每个线程的长度至少为MINIMUM_DOWNLOAD_PART_SIZE，最多下载线程数量为MAXIMUM_DOWNLOAD_PARTS
+     *
      * @param fileInfo
      * @param threadCount
      * @param threadInfoDAO
@@ -108,10 +111,18 @@ public class DownloadUtil {
         List<ThreadInfo> threadInfos = new ArrayList<>();
 
         ///获得每个线程的长度
-        long length = fileInfo.getFileSize() / threadCount;
+        final long length = fileInfo.getFileSize() / threadCount;
+
+        ///获得优化后的每个线程的长度（至少长度为MINIMUM_DOWNLOAD_PART_SIZE，最多线程数量为MAXIMUM_DOWNLOAD_PARTS）
+        long optimalLength = Math.min(fileInfo.getFileSize(), Math.max(length, Config.MINIMUM_DOWNLOAD_PART_SIZE));
+        int optimalThreadCount = (int) ((fileInfo.getFileSize() - 1) / optimalLength + 1);
+        if (optimalThreadCount > Config.MAXIMUM_DOWNLOAD_PARTS) {
+            optimalThreadCount = Config.MAXIMUM_DOWNLOAD_PARTS;
+            optimalLength = fileInfo.getFileSize() / optimalThreadCount;
+        }
 
         ///遍历每个线程
-        for (int i = 0; i < threadCount; i++) {
+        for (int i = 0; i < optimalThreadCount; i++) {
             ///创建线程信息
             ThreadInfo threadInfo = new ThreadInfo (
                     DownloadState.NEW,
@@ -120,15 +131,15 @@ public class DownloadUtil {
                     System.currentTimeMillis(),
                     System.currentTimeMillis(),
                     0,
-                    i * length,
-                    (i + 1) * length - 1,
+                    i * optimalLength,
+                    (i + 1) * optimalLength - 1,
                     fileInfo.getFileUrl(),
                     fileInfo.getFileName(),
                     fileInfo.getFileSize(),
                     fileInfo.getSavePath());
 
             ///处理最后一个线程（可能存在除不尽的情况）
-            if (i == threadCount - 1) {
+            if (i == optimalThreadCount - 1) {
                 threadInfo.setEnd(fileInfo.getFileSize() - 1);
             }
 

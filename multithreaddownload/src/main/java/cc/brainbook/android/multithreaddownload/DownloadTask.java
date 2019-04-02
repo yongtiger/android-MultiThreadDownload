@@ -54,6 +54,10 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  * 如果下载过程中断开网络连接，抛出异常DownloadException.EXCEPTION_NETWORK_FILE_IO_EXCEPTION
  * 用户自行编写触发再次连接的代码（比如轮询、或监听网络状态变化）
  *
+ * 6）采用相比其它定时器（Timer、Handler+Thread）高效的Handler+Runnable实现定时查询和更新下载进度
+ *
+ * 7）优化了每个线程的长度至少为MINIMUM_DOWNLOAD_PART_SIZE，最多下载线程数量为MAXIMUM_DOWNLOAD_PARTS
+ *
  *
  * 使用：
  * 1）创建下载任务类DownloadTask实例，并链式set方法设置参数

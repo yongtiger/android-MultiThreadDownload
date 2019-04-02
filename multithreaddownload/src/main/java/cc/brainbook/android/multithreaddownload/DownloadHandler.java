@@ -4,9 +4,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
 import cc.brainbook.android.multithreaddownload.enumeration.DownloadState;
