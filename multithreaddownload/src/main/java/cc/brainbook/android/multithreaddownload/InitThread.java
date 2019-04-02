@@ -1,4 +1,4 @@
-package cc.brainbook.android.multithreaddownload.thread;
+package cc.brainbook.android.multithreaddownload;
 
 import android.text.TextUtils;
 
@@ -7,7 +7,6 @@ import java.net.HttpURLConnection;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
 import cc.brainbook.android.multithreaddownload.exception.DownloadException;
-import cc.brainbook.android.multithreaddownload.handler.DownloadHandler;
 import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
 
 /**
@@ -19,13 +18,16 @@ public class InitThread extends Thread {
     private Config mConfig;
     private FileInfo mFileInfo;
     private DownloadHandler mHandler;
+    private boolean isStart;
 
-    public InitThread (Config config,
-                      FileInfo fileInfo,
-                      DownloadHandler handler) {
+    InitThread (Config config,
+                       FileInfo fileInfo,
+                       DownloadHandler handler,
+                       boolean isStart) {
         this.mConfig = config;
         this.mFileInfo = fileInfo;
         this.mHandler = handler;
+        this.isStart = isStart;
     }
 
     @Override
@@ -61,7 +63,7 @@ public class InitThread extends Thread {
 
         } catch (Exception e) {
             ///发送消息：下载错误
-            mHandler.obtainMessage(DownloadHandler.MSG_FAILED, e).sendToTarget();
+            mHandler.obtainMessage(DownloadHandler.MSG_INIT_FAILED, e).sendToTarget();
             return;
         } finally {
             ///关闭连接
@@ -70,8 +72,8 @@ public class InitThread extends Thread {
             }
         }
 
-        ///发送消息：下载初始化完成
-        mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED).sendToTarget();
+        ///发送消息：初始化完成
+        mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED, isStart).sendToTarget();
     }
 
 }

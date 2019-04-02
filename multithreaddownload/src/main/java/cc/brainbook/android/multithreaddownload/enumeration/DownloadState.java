@@ -11,7 +11,7 @@ import java.util.Map;
  * It will turn into INITIALIZED when finished initialization.
  * It will turn into STARTED once it starts.
  * Customers can pause or cancel the transfer when needed and turns it into PAUSED or STOPPED state respectively.
- * Finally the transfer will either complete as SUCCEED or fail as FAILED.
+ * Finally the transfer will either complete as SUCCEED or fail as DOWNLOAD_FAILED.
  * WAITING_FOR_NETWORK state may kick in for an active transfer when network is lost.
  * The other enum values are internal use only.
  */
@@ -38,19 +38,24 @@ public enum DownloadState {
     PAUSED,
 
     /**
+     * This state represents a transfer that is stopped (completed)
+     */
+    STOPPED,
+
+    /**
      * This state represents a transfer that is succeed (completed)
      */
     SUCCEED,
 
     /**
-     * This state represents a transfer that has failed (completed)
+     * This state represents a transfer that has failed during initializing
      */
-    FAILED,
+    INIT_FAILED,
 
     /**
-     * This state represents a transfer that is stopped (completed)
+     * This state represents a transfer that has failed during downloading
      */
-    STOPPED,
+    DOWNLOAD_FAILED,
 
     /**
      * This is an internal value used to detect if the current transfer is in an

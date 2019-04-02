@@ -1,4 +1,4 @@
-package cc.brainbook.android.multithreaddownload.thread;
+package cc.brainbook.android.multithreaddownload;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -12,7 +12,6 @@ import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
 import cc.brainbook.android.multithreaddownload.db.ThreadInfoDAO;
-import cc.brainbook.android.multithreaddownload.handler.DownloadHandler;
 import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
 import cc.brainbook.android.multithreaddownload.util.Util;
 
@@ -30,7 +29,7 @@ public class DownloadThread extends Thread {
     ///https://www.cnblogs.com/dolphin0520/p/3920397.html
     private CyclicBarrier mBarrier;
 
-    public DownloadThread(Config config,
+    DownloadThread(Config config,
                           FileInfo fileInfo,
                           DownloadHandler handler,
                           ThreadInfo threadInfo,
@@ -128,13 +127,6 @@ public class DownloadThread extends Thread {
                     ///更新线程信息的状态：下载停止
                     mThreadInfo.setState(DownloadState.STOPPED);
 
-                    ///线程信息保存到数据库
-                    mThreadDAO.updateThreadInfo(mThreadInfo.getId(),
-                            DownloadState.STOPPED,
-                            mThreadInfo.getFinishedBytes(),
-                            mFileInfo.getFinishedTimeMillis(),
-                            System.currentTimeMillis());
-
                     ///等待所有线程停止后再做相应处理
                     mBarrier.await();
 
@@ -156,8 +148,19 @@ public class DownloadThread extends Thread {
             mBarrier.await();
 
         } catch (Exception e) {
-            ///发送消息：下载错误
-            mHandler.obtainMessage(DownloadHandler.MSG_FAILED, e).sendToTarget();
+            ///更新线程信息的状态：下载完成
+            mThreadInfo.setState(DownloadState.DOWNLOAD_FAILED);
+
+            ///线程信息保存到数据库
+            mThreadDAO.updateThreadInfo(mThreadInfo.getId(),
+                    DownloadState.DOWNLOAD_FAILED,
+                    mThreadInfo.getFinishedBytes(),
+                    mFileInfo.getFinishedTimeMillis(),
+                    System.currentTimeMillis());
+
+            ///发送消息：下载失败
+            mHandler.obtainMessage(DownloadHandler.MSG_DOWNLOAD_FAILED, e).sendToTarget();
+
         } finally {
             ///关闭连接
             if (connection != null) {

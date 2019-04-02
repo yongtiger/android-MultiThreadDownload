@@ -110,9 +110,12 @@ public class MainActivity extends AppCompatActivity {
                 .setFileUrl("http://ljdy.tv/test/ljdy.apk")
 //                .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
-//                .setThreadCount(3)
+                .setThreadCount(3)
                 .setDownloadListener(mDownloadListener);
 
+        ///初始化
+        mDownloadTask.init(false); ///（可选）实例化后立即初始化，但不开始下载，可以显示出来进度
+//        mDownloadTask.init(true); ///（可选）实例化后立即初始化，然后开始下载
     }
 
     public void startDownload(View view) {
@@ -151,9 +154,6 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "MainActivity# MyDownloadListener# onStateChanged()# ---------- " + state + " ----------");
 
             switch (state) {
-                case NEW:
-
-                    break;
                 case INITIALIZED:
 
                     break;
@@ -161,6 +161,9 @@ public class MainActivity extends AppCompatActivity {
 
                     break;
                 case PAUSED:
+
+                    break;
+                case STOPPED:
 
                     break;
                 case SUCCEED:
@@ -178,13 +181,10 @@ public class MainActivity extends AppCompatActivity {
                     long finishedBytes = fileInfo.getFinishedBytes();
 
                     break;
-                case STOPPED:
+                case INIT_FAILED:
 
                     break;
-                case FAILED:
-
-                    break;
-                case UNKNOWN:
+                case DOWNLOAD_FAILED:
 
                     break;
             }
