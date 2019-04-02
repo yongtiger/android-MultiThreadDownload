@@ -1,10 +1,7 @@
 package cc.brainbook.android.multithreaddownload.util;
 
-import android.util.Log;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -165,7 +162,6 @@ public class HttpDownloadUtil {
 
 
     /* ---------------- 文件读写 ---------------- */
-
     /**
      * 获得网络连接的输入流对象InputStream
      *
@@ -200,6 +196,56 @@ public class HttpDownloadUtil {
 
         ///由输入流对象创建缓冲输入流对象（比inputStream效率要高）
         return new BufferedInputStream(inputStream);
+    }
+    /**
+     * 获得读出文件的输入流对象FileInputStream
+     *
+     * @param inputFile
+     * @return
+     */
+    public static FileInputStream getFileInputStream(File inputFile) {
+        FileInputStream fileInputStream;
+        try {
+            fileInputStream = new FileInputStream(inputFile);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileInputStream(inputFile)# java.io.FileNotFoundException", e);
+        }
+        return fileInputStream;
+    }
+
+    /**
+     * 获得写入文件的输出流对象FileOutputStream
+     *
+     * @param outputFile
+     * @return
+     */
+    public static FileOutputStream getFileOutputStream(File outputFile) {
+        FileOutputStream fileOutputStream;
+        try {
+            fileOutputStream = new FileOutputStream(outputFile);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            throw new DownloadException(DownloadException.EXCEPTION_FILE_NOT_FOUND, "new FileOutputStream(outputFile)# java.io.FileNotFoundException", e);
+        }
+        return fileOutputStream;
+    }
+
+    /**
+     * 获得写入文件的缓冲输出流对象BufferedOutputStream
+     *
+     * 注意：缓冲输出流对象比OutputStream效率要高
+     * https://blog.csdn.net/hfreeman2008/article/details/49174499
+     *
+     * @param outputFile
+     * @return
+     */
+    public static BufferedOutputStream getBufferedOutputStream(File outputFile) {
+        ///获得写入文件的输出流对象FileOutputStream
+        final FileOutputStream fileOutputStream = getFileOutputStream(outputFile);
+
+        ///由输出流对象创建缓冲输出流对象（比OutputStream效率要高）
+        return new BufferedOutputStream(fileOutputStream);
     }
 
     /**

@@ -34,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
     public TextView mTextView;
 
     private DownloadTask mDownloadTask;
-    private MyDownloadListener mDownloadListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void init() {
         ///实例化下载监听器对象
-        mDownloadListener = new MyDownloadListener();
+        DownloadListener downloadListener = new MyDownloadListener();
 
         ///创建下载任务类DownloadTask实例，并链式配置参数
         ///实例化DownloadTask时传入Context引用，方便操作（但要留意引起内存泄漏！）
@@ -108,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
 //                .setFileName("ljdy.apk")
                 .setSavePath(DOWNLOAD_PATH)
                 .setThreadCount(3)
-                .setDownloadListener(mDownloadListener);
+                .setDownloadListener(downloadListener);
 
         ///初始化
         mDownloadTask.init(false); ///（可选）实例化后立即初始化，但不开始下载，可以显示出来进度

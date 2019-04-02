@@ -170,8 +170,8 @@ public class DownloadTask {
         mConfig.threadCount = threadCount;
         return this;
     }
-    public DownloadTask setDownloadListener(DownloadListener onProgressListener) {
-        mDownloadListener = onProgressListener;
+    public DownloadTask setDownloadListener(DownloadListener downloadListener) {
+        mDownloadListener = downloadListener;
         return this;
     }
     /* ------------ 链式配置 ----------- */
@@ -523,9 +523,9 @@ public class DownloadTask {
     private Runnable mTimerRunnable = new Runnable() {
         @Override
         public void run() {
-            ///发送消息：更新进度
             if (DEBUG) Log.d(TAG, "DownloadTask# mTimer.schedule()# run()# ------- 触发定时器 -------");
 
+            ///发送消息：更新进度
             final long diffTimeMillis = System.currentTimeMillis() - currentTimeMillis;   ///下载进度的耗时（毫秒）
             currentTimeMillis = System.currentTimeMillis();
             final long diffFinishedBytes = mFileInfo.getFinishedBytes() - currentFinishedBytes;  ///下载进度的下载字节数

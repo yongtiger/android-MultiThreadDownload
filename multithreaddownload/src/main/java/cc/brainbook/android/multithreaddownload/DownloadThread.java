@@ -30,11 +30,11 @@ public class DownloadThread extends Thread {
     private CyclicBarrier mBarrier;
 
     DownloadThread(Config config,
-                          FileInfo fileInfo,
-                          DownloadHandler handler,
-                          ThreadInfo threadInfo,
-                          ThreadInfoDAO threadDAO,
-                          CyclicBarrier barrier) {
+                   FileInfo fileInfo,
+                   DownloadHandler handler,
+                   ThreadInfo threadInfo,
+                   ThreadInfoDAO threadDAO,
+                   CyclicBarrier barrier) {
         this.mConfig = config;
         this.mFileInfo = fileInfo;
         this.mHandler = handler;
@@ -103,9 +103,9 @@ public class DownloadThread extends Thread {
                 HttpDownloadUtil.channelWriteByteBuffer(channel, bytes, readLength);    ///FileChannel的写操作（ByteBuffer）
 //                HttpDownloadUtil.channelWriteMappedByteBuffer(channel, bytes, readLength, start);    ///FileChannel的写操作（MappedByteBuffer）///???????MappedByteBuffer没有调试通过！
 
-                ///累计整个文件的下载进度
+                ///累计整个文件的已经下载完的总字节数
                 mFileInfo.setFinishedBytes(mFileInfo.getFinishedBytes() + readLength);
-                ///累计每个线程的下载进度
+                ///累计每个线程的已经下载完的总字节数
                 mThreadInfo.setFinishedBytes(mThreadInfo.getFinishedBytes() + readLength);
 
                 if (mFileInfo.getState() == DownloadState.PAUSED) {  ///暂停下载线程

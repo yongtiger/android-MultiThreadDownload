@@ -77,7 +77,7 @@ public class DownloadHandler extends Handler {
                         mFileInfo.getSavePath());
 
                 if (!mDownloadTask.mThreadInfos.isEmpty()) {
-                    ///重置文件信息的下载完成的总字节数、总耗时
+                    ///重置文件信息的已经完成的总耗时（毫秒）、总字节数
                     setFileInfoFinished();
 
                     DownloadState state = DownloadUtil.getStateFromThreadInfos(mDownloadTask.mThreadInfos);
@@ -330,12 +330,10 @@ public class DownloadHandler extends Handler {
     }
 
     /**
-     * 重置下载文件的下载完的总字节数、总耗时
+     * 重置文件信息的已经完成的总字节数、总耗时（毫秒）
      */
     private void setFileInfoFinished() {
         ///[修正下载完成（成功/失败/停止）后重新开始下载]
-        ///重置文件信息的已经完成的总耗时（毫秒）、总字节数
-        mFileInfo.setFinishedTimeMillis(0);
         mFileInfo.setFinishedBytes(0);
 
         for (ThreadInfo threadInfo : mDownloadTask.mThreadInfos) {
