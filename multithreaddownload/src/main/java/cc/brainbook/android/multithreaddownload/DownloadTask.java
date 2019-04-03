@@ -89,7 +89,7 @@ import static cc.brainbook.android.multithreaddownload.BuildConfig.DEBUG;
  *      ///避免除0异常
  *      int progress = fileInfo.getFinishedBytes() == 0 ? 0 : (int) (fileInfo.getFinishedBytes() * 100 / fileInfo.getFileSize());
  *      long speed = diffFinishedBytes == 0 ? 0 : diffFinishedBytes / diffTimeMillis;
- * 也可用fileInfo.getFinishedTimeMillis()获取实时的下载耗时（暂停期间不计！）
+ * 也可用fileInfo.getFinishedTimeMillis()获取实时的下载耗时
  * threadInfos提供了全部线程信息（比如，可实现分段详细显示下载进度条）
  *
  * 3）下载事件接口DownloadListener（可选）
