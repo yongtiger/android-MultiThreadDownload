@@ -86,14 +86,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         Log.d(TAG, "============== MainActivity# onDestroy()# ==============");
+        super.onDestroy();
 
         ///Activity关闭后应调用下载暂停来保存下载文件信息（即断点）到数据库
         pauseDownload(mDownloadTask);
 
         ///避免内存泄漏
-        mDownloadTask.setDownloadListener(null);
-
-        super.onDestroy();
+        if (mDownloadTask != null) {
+            mDownloadTask.setDownloadListener(null);
+        }
     }
 
     public void init() {
