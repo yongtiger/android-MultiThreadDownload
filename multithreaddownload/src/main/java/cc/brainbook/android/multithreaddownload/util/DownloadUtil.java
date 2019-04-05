@@ -33,10 +33,6 @@ public class DownloadUtil {
                 throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file cannot be deleted: " + saveFile);
             }
         }
-        ///如果保存文件不可写则报异常
-        if (!saveFile.canWrite()) {
-            throw new DownloadException(DownloadException.EXCEPTION_FILE_WRITE_EXCEPTION, "The file is not writable: " + saveFile);
-        }
 
         ///创建下载空文件
         RandomAccessFile randomAccessFile = HttpDownloadUtil.getRandomAccessFile(saveFile, "rwd");
