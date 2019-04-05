@@ -163,13 +163,13 @@ public class DownloadHandler extends Handler {
             case MSG_INIT_FAILED:
                 if (DEBUG) Log.d(TAG, "DownloadHandler# handleMessage()# msg.what = MSG_INIT_FAILED");
 
+                ///更改状态为下载失败（DOWNLOAD_FAILED）
+                changeStateToInitFailed();
+
                 ///错误的回调接口
                 if (mDownloadListener != null) {
                     mDownloadListener.onError(mFileInfo, mDownloadTask.mThreadInfos, (Exception) msg.obj);
                 }
-
-                ///更改状态为下载失败（DOWNLOAD_FAILED）
-                changeStateToInitFailed();
 
                 break;
             case MSG_DOWNLOAD_FAILED:
@@ -178,13 +178,13 @@ public class DownloadHandler extends Handler {
                 ///停止定时器
                 mDownloadTask.stopTimer();
 
+                ///更改状态为下载失败（DOWNLOAD_FAILED）
+                changeStateToDownloadFailed();
+
                 ///错误的回调接口
                 if (mDownloadListener != null) {
                     mDownloadListener.onError(mFileInfo, mDownloadTask.mThreadInfos, (Exception) msg.obj);
                 }
-
-                ///更改状态为下载失败（DOWNLOAD_FAILED）
-                changeStateToDownloadFailed();
 
                 break;
         }
