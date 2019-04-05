@@ -232,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
 
                 if (DownloadException.EXCEPTION_FILE_URL_NULL == downloadException.getCode()) {
 
-                } else if (DownloadException.EXCEPTION_SAVE_PATH_MKDIR == downloadException.getCode()) {
+                } else if (DownloadException.EXCEPTION_FILE_WRITE_EXCEPTION == downloadException.getCode()) {
 
                 } else if (DownloadException.EXCEPTION_NETWORK_MALFORMED_URL == downloadException.getCode()) {
                     ///当URL为null或无效网络连接协议时：java.net.MalformedURLException: Protocol not found

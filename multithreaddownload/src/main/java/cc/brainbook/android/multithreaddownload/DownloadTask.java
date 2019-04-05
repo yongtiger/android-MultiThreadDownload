@@ -219,7 +219,13 @@ public class DownloadTask {
             if (!Util.mkdirs(mFileInfo.getSavePath())) {
                 ///发送消息：下载失败
                 mHandler.obtainMessage(DownloadHandler.MSG_INIT_FAILED,
-                        new DownloadException(DownloadException.EXCEPTION_SAVE_PATH_MKDIR, "The file save path cannot be made: " + mFileInfo.getSavePath()))
+                        new DownloadException(DownloadException.EXCEPTION_FILE_MKDIR_EXCEPTION, "The file save path cannot be made: " + mFileInfo.getSavePath()))
+                        .sendToTarget();
+                return;
+            } else if (!Util.isCanWrite(mFileInfo.getSavePath())) {
+                ///发送消息：下载失败
+                mHandler.obtainMessage(DownloadHandler.MSG_INIT_FAILED,
+                        new DownloadException(DownloadException.EXCEPTION_FILE_WRITE_EXCEPTION, "The file save path is not writable: " + mFileInfo.getSavePath()))
                         .sendToTarget();
                 return;
             }

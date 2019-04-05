@@ -83,4 +83,13 @@ public class Util {
         return mkdir(new File(path));
     }
 
+    /**
+     * 检查文件或目录是否可写入
+     *
+     * @param path
+     * @return
+     */
+    public static boolean isCanWrite(String path) {
+        return new File(path).canWrite();
+    }
 }
