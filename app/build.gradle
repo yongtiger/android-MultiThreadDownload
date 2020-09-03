@@ -6,10 +6,12 @@ android {
         applicationId "cc.brainbook.study.mymultithreadhttpdownload"
         minSdkVersion 15
         targetSdkVersion 30
-        versionCode 1
-        versionName "1.0"
+        versionCode 40001
+        versionName "4.0.1"
+
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
+
     buildTypes {
         release {
             minifyEnabled false
