@@ -1,10 +1,13 @@
 package cc.brainbook.android.multithreaddownload.util;
 
+import android.content.Context;
+
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 
+import cc.brainbook.android.multithreaddownload.R;
 import cc.brainbook.android.multithreaddownload.bean.FileInfo;
 import cc.brainbook.android.multithreaddownload.bean.ThreadInfo;
 import cc.brainbook.android.multithreaddownload.config.Config;
@@ -19,18 +22,20 @@ public class DownloadUtil {
      *
      * 注意：可以不要创建占位文件（下载文件大小将实时增长）
      *
+     * @param context
      * @param savePath
      * @param fileName
      * @param fileSize
      */
-    public static void createEmptySaveFile(String savePath, String fileName, long fileSize) {
+    public static void createEmptySaveFile(Context context, String savePath, String fileName, long fileSize) {
         ///获得保存文件
         final File saveFile = new File(savePath, fileName);
 
         ///如果保存文件存在则删除
         if (saveFile.exists()) {
             if (!saveFile.delete()) {
-                throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file cannot be deleted: " + saveFile);
+                throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION,
+                        context.getString(R.string.msg_the_file_cannot_be_deleted, saveFile.getAbsolutePath()));
             }
         }
 

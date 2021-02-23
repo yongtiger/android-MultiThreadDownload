@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [Android P(9.0) http网络请求的问题#Cleartext HTTP traffic not permitted]android:networkSecurityConfig -->
+<!--https://www.jianshu.com/p/57047a84e559-->
+<network-security-config>
+
+    <base-config cleartextTrafficPermitted="true" />
+
+</network-security-config>

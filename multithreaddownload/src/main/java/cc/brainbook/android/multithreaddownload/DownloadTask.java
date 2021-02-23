@@ -206,7 +206,7 @@ public class DownloadTask {
         if (TextUtils.isEmpty(mFileInfo.getFileUrl())) {
             ///发送消息：下载错误
             mHandler.obtainMessage(DownloadHandler.MSG_INIT_FAILED,
-                    new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, "The file url cannot be null."))
+                    new DownloadException(DownloadException.EXCEPTION_FILE_URL_NULL, mContext.getString(R.string.msg_the_file_url_cannot_be_null)))
                     .sendToTarget();
             return;
         }
@@ -219,13 +219,15 @@ public class DownloadTask {
             if (!Util.mkdirs(mFileInfo.getSavePath())) {
                 ///发送消息：下载失败
                 mHandler.obtainMessage(DownloadHandler.MSG_INIT_FAILED,
-                        new DownloadException(DownloadException.EXCEPTION_FILE_MKDIR_EXCEPTION, "The file save path cannot be made: " + mFileInfo.getSavePath()))
+                        new DownloadException(DownloadException.EXCEPTION_FILE_MKDIR_EXCEPTION,
+                                mContext.getString(R.string.msg_the_file_save_path_cannot_be_made,  mFileInfo.getSavePath())))
                         .sendToTarget();
                 return;
             } else if (!Util.isCanWrite(mFileInfo.getSavePath())) {
                 ///发送消息：下载失败
                 mHandler.obtainMessage(DownloadHandler.MSG_INIT_FAILED,
-                        new DownloadException(DownloadException.EXCEPTION_FILE_WRITE_EXCEPTION, "The file save path is not writable: " + mFileInfo.getSavePath()))
+                        new DownloadException(DownloadException.EXCEPTION_FILE_WRITE_EXCEPTION,
+                                mContext.getString(R.string.msg_the_file_save_path_is_not_writable,  mFileInfo.getSavePath())))
                         .sendToTarget();
                 return;
             }
@@ -236,6 +238,7 @@ public class DownloadTask {
         if (TextUtils.isEmpty(mFileInfo.getFileName()) || mFileInfo.getFileSize() <= 0) {
             ///启动初始化线程
             final InitThread initThread = new InitThread (
+                    mContext,
                     mConfig,
                     mFileInfo,
                     mHandler,
@@ -294,7 +297,7 @@ public class DownloadTask {
                 break;
             case INITIALIZED:   ///初始化（INITIALIZED）后开始下载start()
                 ///创建下载空占位文件
-                DownloadUtil.createEmptySaveFile(mFileInfo.getSavePath(), mFileInfo.getFileName(), mFileInfo.getFileSize());
+                DownloadUtil.createEmptySaveFile(mContext, mFileInfo.getSavePath(), mFileInfo.getFileName(), mFileInfo.getFileSize());
 
                 ///执行下载过程
                 innerStart();
@@ -318,7 +321,7 @@ public class DownloadTask {
                 mHandler.handleMessage(mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED));
 
                 ///创建下载空占位文件
-                DownloadUtil.createEmptySaveFile(mFileInfo.getSavePath(), mFileInfo.getFileName(), mFileInfo.getFileSize());
+                DownloadUtil.createEmptySaveFile(mContext, mFileInfo.getSavePath(), mFileInfo.getFileName(), mFileInfo.getFileSize());
 
                 ///执行下载过程
                 innerStart();
@@ -332,7 +335,7 @@ public class DownloadTask {
                 mHandler.handleMessage(mHandler.obtainMessage(DownloadHandler.MSG_INITIALIZED));
 
                 ///创建下载空占位文件
-                DownloadUtil.createEmptySaveFile(mFileInfo.getSavePath(), mFileInfo.getFileName(), mFileInfo.getFileSize());
+                DownloadUtil.createEmptySaveFile(mContext, mFileInfo.getSavePath(), mFileInfo.getFileName(), mFileInfo.getFileSize());
 
                 ///执行下载过程
                 innerStart();

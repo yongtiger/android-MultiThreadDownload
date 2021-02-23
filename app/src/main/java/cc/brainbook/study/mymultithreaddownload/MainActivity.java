@@ -29,8 +29,6 @@ import cc.brainbook.android.multithreaddownload.listener.DownloadListener;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "TAG";
 
-    public static final String DOWNLOAD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Downloads/";
-
     public TextView mTextView;
 
     private DownloadTask mDownloadTask;
@@ -106,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
         mDownloadTask = new DownloadTask(getApplicationContext())
                 .setFileUrl("http://ljdy.tv/test/ljdy.apk")
 //                .setFileName("ljdy.apk")
-                .setSavePath(DOWNLOAD_PATH)
+                .setSavePath(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath())
                 .setThreadCount(3)
                 .setDownloadListener(downloadListener);
 

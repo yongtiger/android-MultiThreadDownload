@@ -1,5 +1,6 @@
 package cc.brainbook.android.multithreaddownload;
 
+import android.content.Context;
 import android.text.TextUtils;
 
 import java.net.HttpURLConnection;
@@ -15,15 +16,18 @@ import cc.brainbook.android.multithreaddownload.util.HttpDownloadUtil;
  * 由网络连接获得文件名、文件长度
  */
 public class InitThread extends Thread {
+    private Context mContext;
     private Config mConfig;
     private FileInfo mFileInfo;
     private DownloadHandler mHandler;
     private boolean isStart;
 
-    InitThread (Config config,
-                       FileInfo fileInfo,
-                       DownloadHandler handler,
-                       boolean isStart) {
+    InitThread (Context context,
+                Config config,
+                FileInfo fileInfo,
+                DownloadHandler handler,
+                boolean isStart) {
+        this.mContext = context;
         this.mConfig = config;
         this.mFileInfo = fileInfo;
         this.mHandler = handler;
@@ -55,9 +59,10 @@ public class InitThread extends Thread {
                 ///注意：connection.getContentLength()最大为2GB，使用connection.getHeaderField("Content-Length")可以突破2GB限制
                 ///http://szuwest.github.io/tag/android-download.html
 //            mFileInfo.setFileSize(connection.getContentLength());
-                mFileInfo.setFileSize(Long.valueOf(connection.getHeaderField("Content-Length")));
+                mFileInfo.setFileSize(Long.parseLong(connection.getHeaderField("Content-Length")));
                 if (mFileInfo.getFileSize() <= 0) {
-                    throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION, "The file size is not valid: " + mFileInfo.getFileSize());
+                    throw new DownloadException(DownloadException.EXCEPTION_FILE_DELETE_EXCEPTION,
+                            mContext.getString(R.string.msg_the_ile_size_is_not_valid, mFileInfo.getFileSize()));
                 }
             }
 

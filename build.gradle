@@ -1,13 +1,26 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
+    ext {
+        setup = [
+                compileSdk : 30,
+                buildTools : "30.0.3",
+                minSdk     : 15,
+                targetSdk  : 30
+        ]
+
+        release = [
+                versionName: "4.1.0",   ///v4.1.0#upgrade gradle
+                versionCode: 40101
+        ]
+    }
+
     repositories {
         google()
         jcenter()
-        
     }
+
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.0.1'
+        classpath "com.android.tools.build:gradle:4.1.2"
 
         ///[jitpack#publish]https://jitpack.io/docs/ANDROID/
         classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
@@ -22,6 +35,8 @@ allprojects {
         google()
         jcenter()
 
+        ///[jitpack]
+        maven { url 'https://jitpack.io' }
     }
 }
 

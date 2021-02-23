@@ -1,19 +1,22 @@
-apply plugin: 'com.android.library'
+plugins {
+    id 'com.android.library'
+}
 
 ///[jitpack#publish]https://jitpack.io/docs/ANDROID/
 apply plugin: 'com.github.dcendents.android-maven'
 group='com.github.yongtiger'
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion setup.compileSdk
+    buildToolsVersion setup.buildTools
 
     defaultConfig {
-        minSdkVersion 15
-        targetSdkVersion 30
-        versionCode 40001
-        versionName "4.0.1"
+        minSdkVersion setup.minSdk
+        targetSdkVersion setup.targetSdk
+        versionCode release.versionCode
+        versionName release.versionName
 
-        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        consumerProguardFiles "consumer-rules.pro"
     }
 
     buildTypes {
@@ -23,13 +26,14 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-    implementation 'androidx.appcompat:appcompat:1.2.0'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    implementation "androidx.annotation:annotation:1.1.0"
+    // To use the Java-compatible @Experimental API annotation
+//    implementation "androidx.annotation:annotation-experimental:1.0.0"
 }
