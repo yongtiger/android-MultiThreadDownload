@@ -9,21 +9,22 @@ buildscript {
         ]
 
         release = [
-                versionName: "4.1.2",   ///v4.1.2
-                versionCode: 40102
+                versionName: "4.1.3",   ///v4.1.3
+                versionCode: 40103
         ]
     }
 
     repositories {
+        mavenCentral()
         google()
-        jcenter()
+//        maven {
+//            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+//        }
+//        jcenter()   //////??????Please remove usages of `jcenter()` Maven repository from your build scripts and migrate your build to other Maven repositories. This repository is deprecated and it will be shut down in the future
     }
 
     dependencies {
-        classpath "com.android.tools.build:gradle:4.1.2"
-
-        ///[jitpack#publish]https://jitpack.io/docs/ANDROID/
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
+        classpath 'com.android.tools.build:gradle:4.2.1'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -32,11 +33,19 @@ buildscript {
 
 allprojects {
     repositories {
+        mavenCentral()
         google()
-        jcenter()
-
-        ///[jitpack]
         maven { url 'https://jitpack.io' }
+//        maven {
+//            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+//        }
+//        jcenter()   //////??????Please remove usages of `jcenter()` Maven repository from your build scripts and migrate your build to other Maven repositories. This repository is deprecated and it will be shut down in the future
+
+        //////??????TODO: Remove jcenter() once available in Maven Central.
+        jcenter() {
+            content {
+            }
+        }
     }
 }
 

@@ -2,10 +2,6 @@ plugins {
     id 'com.android.library'
 }
 
-///[jitpack#publish]https://jitpack.io/docs/ANDROID/
-apply plugin: 'com.github.dcendents.android-maven'
-group='com.github.yongtiger'
-
 android {
     compileSdkVersion setup.compileSdk
     buildToolsVersion setup.buildTools
@@ -33,7 +29,7 @@ android {
 }
 
 dependencies {
-    implementation "androidx.annotation:annotation:1.1.0"
+    implementation "androidx.annotation:annotation:1.2.0"
     // To use the Java-compatible @Experimental API annotation
 //    implementation "androidx.annotation:annotation-experimental:1.0.0"
 }
