@@ -102,8 +102,8 @@ public class MainActivity extends AppCompatActivity {
         ///创建下载任务类DownloadTask实例，并链式配置参数
         ///实例化DownloadTask时传入Context引用，方便操作（但要留意引起内存泄漏！）
         mDownloadTask = new DownloadTask(getApplicationContext())
-                .setFileUrl("https://ljdy.space/test/ljdy.apk")
-//                .setFileName("ljdy.apk")
+                .setFileUrl("https://ibrainbook.com/brainassistant/_apk/brain.assistant.apk")
+//                .setFileName("brain.apk")
                 .setSavePath(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath())
                 .setThreadCount(3)
                 .setDownloadListener(downloadListener);

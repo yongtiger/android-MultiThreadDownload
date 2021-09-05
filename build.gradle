@@ -9,22 +9,24 @@ buildscript {
         ]
 
         release = [
-                versionName: "4.1.3",   ///v4.1.3
-                versionCode: 40103
+                versionName: "4.2.0",   ///v4.2.0#update gradle:7.0.2
+                versionCode: 40200
         ]
     }
 
     repositories {
         mavenCentral()
         google()
-//        maven {
-//            url 'https://oss.sonatype.org/content/repositories/snapshots/'
-//        }
-//        jcenter()   //////??????Please remove usages of `jcenter()` Maven repository from your build scripts and migrate your build to other Maven repositories. This repository is deprecated and it will be shut down in the future
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.2.1'
+        classpath 'com.android.tools.build:gradle:7.0.2'
+
+        ///[FIX#jitpack#jcenter废弃#Please remove usages of `jcenter()` Maven repository from your build scripts and migrate your build to other Maven repositories.]
+        ///https://www.shangmayuan.com/a/12c08d0e68c3421cb2d547ee.html
+        ///https://stackoverflow.com/questions/67599438/gradle-7-and-jitpack-io-runs-into-error-during-publish
+//        classpath 'com.github.dcendents:android-maven-plugin:1.2'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -35,17 +37,9 @@ allprojects {
     repositories {
         mavenCentral()
         google()
-        maven { url 'https://jitpack.io' }
-//        maven {
-//            url 'https://oss.sonatype.org/content/repositories/snapshots/'
-//        }
-//        jcenter()   //////??????Please remove usages of `jcenter()` Maven repository from your build scripts and migrate your build to other Maven repositories. This repository is deprecated and it will be shut down in the future
 
-        //////??????TODO: Remove jcenter() once available in Maven Central.
-        jcenter() {
-            content {
-            }
-        }
+        ///[Jitpack]
+        maven { url 'https://jitpack.io' }
     }
 }
 
