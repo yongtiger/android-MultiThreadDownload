@@ -14,7 +14,6 @@ android {
         versionCode release.versionCode
         versionName release.versionName
 
-        consumerProguardFiles "consumer-rules.pro"
     }
 
     buildTypes {
@@ -34,5 +33,5 @@ android {
 dependencies {
     implementation project(':multithreaddownload')
 
-    implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
 }

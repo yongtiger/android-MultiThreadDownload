@@ -25,8 +25,6 @@ android {
     defaultConfig {
         minSdkVersion setup.minSdk
         targetSdkVersion setup.targetSdk
-        versionCode release.versionCode
-        versionName release.versionName
 
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -45,7 +43,7 @@ android {
 }
 
 dependencies {
-    implementation "androidx.annotation:annotation:1.2.0"
+    implementation "androidx.annotation:annotation:1.3.0"
     // To use the Java-compatible @Experimental API annotation
 //    implementation "androidx.annotation:annotation-experimental:1.0.0"
 }

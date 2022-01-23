@@ -2,15 +2,15 @@
 buildscript {
     ext {
         setup = [
-                compileSdk : 30,
-                buildTools : "30.0.3",
+                compileSdk : 31,
+                buildTools : "31.0.0",
                 minSdk     : 15,
-                targetSdk  : 30
+                targetSdk  : 31
         ]
 
         release = [
-                versionName: "4.2.0",   ///v4.2.0#update gradle:7.0.2
-                versionCode: 40200
+                versionName: "4.3.0",   ///v4.3.0#update gradle:7.0.4
+                versionCode: 40300
         ]
     }
 
@@ -20,7 +20,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.0.2'
+        classpath 'com.android.tools.build:gradle:7.0.4'
 
         ///[FIX#jitpack#jcenter废弃#Please remove usages of `jcenter()` Maven repository from your build scripts and migrate your build to other Maven repositories.]
         ///https://www.shangmayuan.com/a/12c08d0e68c3421cb2d547ee.html
