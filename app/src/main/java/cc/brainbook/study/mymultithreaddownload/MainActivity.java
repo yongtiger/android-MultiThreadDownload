@@ -219,10 +219,10 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
             if (e.getCause() == null) {
                 Log.d(TAG, "MainActivity# onError()# Message: " + e.getMessage());
-                Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
             } else {
                 Log.d(TAG, "MainActivity# onError()# Message: " + e.getMessage() + "\n" + e.getCause().getMessage());
-                Toast.makeText(getApplicationContext(), e.getMessage() + "\n" + e.getCause().getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), e.getLocalizedMessage() + "\n" + e.getCause().getLocalizedMessage(), Toast.LENGTH_LONG).show();
             }
 
             if (e instanceof DownloadException) {

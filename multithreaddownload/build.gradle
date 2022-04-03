@@ -20,7 +20,7 @@ afterEvaluate {
 
 android {
     compileSdkVersion setup.compileSdk
-    buildToolsVersion setup.buildTools
+//    buildToolsVersion setup.buildTools
 
     defaultConfig {
         minSdkVersion setup.minSdk

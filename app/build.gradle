@@ -4,7 +4,7 @@ plugins {
 
 android {
     compileSdkVersion setup.compileSdk
-    buildToolsVersion setup.buildTools
+//    buildToolsVersion setup.buildTools
 
     defaultConfig {
         applicationId "cc.brainbook.study.mymultithreadhttpdownload"
